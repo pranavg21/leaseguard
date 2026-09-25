@@ -23,7 +23,8 @@ def test_packet_lists_flagged_clauses_and_notes(client: OfflineClient, tenant_ct
     assert "Question for your lawyer" in text
     assert "Maharashtra" in text
     meta = PdfReader(io.BytesIO(data)).metadata
-    assert meta is not None and meta.title == "LeaseGuard consultation packet"
+    assert meta is not None
+    assert meta.title == "LeaseGuard consultation packet"
 
 
 def test_packet_without_flags_and_with_skipped_audit(client: OfflineClient, tenant_ctx: UserContext) -> None:
