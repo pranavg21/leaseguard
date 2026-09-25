@@ -1,7 +1,7 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { createHash } from 'node:crypto';
-import { MAX_EVIDENCE_FILES, prepareFile, prepareFiles, sampleFiles, sha256Hex } from '../../static/js/evidence.js';
+import { MAX_EVIDENCE_FILES, MAX_EVIDENCE_TOTAL_BYTES, prepareFile, prepareFiles, sampleFiles, sha256Hex } from '../../static/js/evidence.js';
 
 const { subtle } = globalThis.crypto;
 
@@ -29,4 +29,11 @@ test('sampleFiles creates named text files', async () => {
   const [file] = sampleFiles({ 'chat.txt': 'hi' });
   assert.equal(file.name, 'chat.txt');
   assert.equal(await file.text(), 'hi');
+});
+
+test('files larger than the total limit are rejected before any is read', async () => {
+  let read = false;
+  const big = { name: 'big.pdf', size: MAX_EVIDENCE_TOTAL_BYTES / 2 + 1, arrayBuffer: async () => { read = true; return new ArrayBuffer(1); } };
+  await assert.rejects(prepareFiles([big, { ...big }], subtle), /5 MB in total/);
+  assert.equal(read, false);
 });

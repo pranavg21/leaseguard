@@ -3,9 +3,12 @@
  * Service worker: caches the app shell so the page opens offline, and shows an
  * offline page for navigations when the network is unavailable. API calls are
  * never cached, because agreements must not be stored.
+ *
+ * Only the code needed for the first screen is precached. The deposit-dossier
+ * modules are loaded lazily by the page and cached the first time they are used.
  */
 
-const CACHE_NAME = 'leaseguard-shell-v4';
+const CACHE_NAME = 'leaseguard-shell-v5';
 const SHELL = Object.freeze([
   '/',
   '/offline.html',
@@ -19,22 +22,19 @@ const SHELL = Object.freeze([
   '/static/js/render.js',
   '/static/js/view.js',
   '/static/js/lazy.js',
-  '/static/js/evidence.js',
-  '/static/js/dossier.js',
-  '/static/js/dossier_render.js',
 ]);
 
 /**
  * Decide how a request should be handled.
  * @param {Request} request - The intercepted request.
- * @returns {'network-only' | 'navigate' | 'cache-first'} The strategy.
+ * @returns {'network-only' | 'navigate' | 'stale-while-revalidate'} The strategy.
  */
 function strategyFor(request) {
   const url = new URL(request.url);
-  if (request.method !== 'GET' || url.pathname.startsWith('/api/')) {
+  if (request.method !== 'GET' || url.origin !== self.location.origin || url.pathname.startsWith('/api/')) {
     return 'network-only';
   }
-  return request.mode === 'navigate' ? 'navigate' : 'cache-first';
+  return request.mode === 'navigate' ? 'navigate' : 'stale-while-revalidate';
 }
 
 /**
@@ -51,12 +51,25 @@ async function navigate(request) {
 }
 
 /**
- * Serve from cache, then network.
- * @param {Request} request - A static-asset request.
+ * Serve a static asset from the cache at once and refresh the cached copy in the
+ * background; on a cache miss, fetch it and keep a copy for next time.
+ * @param {FetchEvent} event - The fetch event for a static asset.
  * @returns {Promise<Response>} The asset.
  */
-async function cacheFirst(request) {
-  return (await caches.match(request)) ?? fetch(request);
+async function staleWhileRevalidate(event) {
+  const cache = await caches.open(CACHE_NAME);
+  const cached = await cache.match(event.request);
+  const refresh = fetch(event.request).then(async (response) => {
+    if (response.ok) {
+      await cache.put(event.request, response.clone());
+    }
+    return response;
+  });
+  if (!cached) {
+    return refresh;
+  }
+  event.waitUntil(refresh.catch(() => undefined));
+  return cached;
 }
 
 self.addEventListener('install', (event) => {
@@ -73,7 +86,7 @@ self.addEventListener('fetch', (event) => {
   const strategy = strategyFor(event.request);
   if (strategy === 'navigate') {
     event.respondWith(navigate(event.request));
-  } else if (strategy === 'cache-first') {
-    event.respondWith(cacheFirst(event.request));
+  } else if (strategy === 'stale-while-revalidate') {
+    event.respondWith(staleWhileRevalidate(event));
   }
 });

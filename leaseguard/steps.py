@@ -1,20 +1,11 @@
 """Personalised next steps: an ordered action plan built from the findings and the user's context."""
 
-from dataclasses import dataclass
-
 from leaseguard.knowledge import CATEGORY_TITLES
-from leaseguard.models import AnalysisReport, RiskLevel, Role
+from leaseguard.models import AnalysisReport, RiskLevel, Role, Step
+
+__all__ = ["FREE_LEGAL_AID", "MAX_LISTED", "Step", "formality_step", "gap_step", "negotiation_step", "review_steps"]
 
 MAX_LISTED = 4
-
-
-@dataclass(frozen=True)
-class Step:
-    """One action the user can take, in plain language."""
-
-    title: str
-    detail: str
-
 
 FREE_LEGAL_AID = Step(
     "Get free legal help if you are eligible",

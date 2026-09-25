@@ -11,9 +11,7 @@ from reportlab.platypus import Flowable, KeepTogether, Paragraph, SimpleDocTempl
 
 from leaseguard.constants import PDF_MARGIN_MM
 from leaseguard.knowledge import CATEGORY_TITLES
-from leaseguard.models import AnalysisReport, Finding, RiskLevel
-from leaseguard.steps import Step, review_steps
-from leaseguard.summary import key_terms
+from leaseguard.models import AnalysisReport, Finding, RiskLevel, Step
 
 DISCLAIMER = (
     "LeaseGuard provides information, not legal advice. Please review this packet with a qualified "
@@ -98,7 +96,7 @@ def key_terms_flowables(report: AnalysisReport, styles: StyleSheet1) -> list[Flo
     Returns:
         A heading followed by one line per term.
     """
-    lines = [f"{t.label}: {t.value}" + (f' - "{t.quote}"' if t.quote else "") for t in key_terms(report)]
+    lines = [f"{t.label}: {t.value}" + (f' - "{t.quote}"' if t.quote else "") for t in report.key_terms]
     return [para("Key terms at a glance", "Heading2", styles), *(para(line, "BodyText", styles) for line in lines)]
 
 
@@ -151,4 +149,4 @@ def build_packet(report: AnalysisReport) -> bytes:
         para(f"Reviewed as: {context.role.value}. State: {context.state}.", "BodyText", styles),
     ]
     story = [*header, *key_terms_flowables(report, styles), *_sections(report, styles)]
-    return render_pdf([*story, *steps_flowables(review_steps(report), styles)], "LeaseGuard consultation packet")
+    return render_pdf([*story, *steps_flowables(report.next_steps, styles)], "LeaseGuard consultation packet")

@@ -16,11 +16,12 @@
 |---|---|
 | Pydantic schemas with `extra="forbid"` and length limits on every body | `leaseguard/api/schemas.py` |
 | `Content-Type: application/json` required (415 otherwise) | `leaseguard/api/security.py` |
-| 8 MB request limit (413) and 5 MB file limit; files identified by signature | `security.py`, `ingest.py` |
+| 8 MB request limit (413), 5 MB file limit and 5 MB evidence total; files identified by signature | `security.py`, `ingest.py` |
 | 30 requests per minute per client (429) | `RateLimiter` in `security.py` |
 | CSP, HSTS, `X-Frame-Options`, `nosniff`, Referrer and Permissions policies, COOP and CORP | `SECURITY_HEADERS` in `security.py` |
 | Structured errors that never include stack traces or echo input back | `leaseguard/api/app.py` |
 | Static pages served from fixed paths; the request cannot choose a file | `_page_handler` in `app.py` |
+| `report_id` and `dossier_id` are SHA-256 content hashes (strict 64-hex pattern). They cannot be guessed without the document itself, they point only to results held in a small in-memory cache, and they are never logged | `engine.py`, `dossier/service.py`, `schemas.py` |
 
 ## AI safety
 - The document is wrapped in `<document>` delimiters, and embedded delimiter tags are neutralised.

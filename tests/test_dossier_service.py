@@ -3,11 +3,13 @@
 import pytest
 
 from leaseguard.ai import OfflineClient
-from leaseguard.constants import MAX_EVIDENCE_FILES
+from leaseguard.constants import MAX_EVIDENCE_FILES, MAX_EVIDENCE_TOTAL_BYTES
+from leaseguard.dossier import evidence as evidence_module
+from leaseguard.dossier import service as service_module
 from leaseguard.dossier.evidence import sha256_hex
 from leaseguard.dossier.models import EventKind, Message
-from leaseguard.dossier.service import Upload, build_dossier, extract_events, load_files
-from leaseguard.errors import IngestError
+from leaseguard.dossier.service import Upload, build_dossier, cached_dossier, extract_events, load_files
+from leaseguard.errors import ExpiredError, IngestError
 from leaseguard.models import Language
 from leaseguard.sample import SAMPLE_LEASE
 from leaseguard.sample_evidence import SAMPLE_EVIDENCE
@@ -90,3 +92,32 @@ def test_identical_inputs_reuse_the_cached_dossier() -> None:
     )
     build_dossier(uploads, None, PARTIES, client, Language.HINDI)
     assert client.calls == 2
+
+
+def test_each_file_is_hashed_exactly_once(monkeypatch: pytest.MonkeyPatch) -> None:
+    hashed: list[bytes] = []
+
+    def counting(data: bytes) -> str:
+        hashed.append(data)
+        return sha256_hex(data)
+
+    monkeypatch.setattr(service_module, "sha256_hex", counting)
+    monkeypatch.setattr(evidence_module, "sha256_hex", counting)
+    uploads = [Upload("chat.txt", CHAT, None), Upload("receipt.txt", RECEIPT, None)]
+    dossier = build_dossier(uploads, None, PARTIES, OfflineClient(), Language.ENGLISH)
+    assert sorted(hashed) == sorted([CHAT, RECEIPT])
+    assert dossier.files[0].sha256 == sha256_hex(CHAT)
+
+
+def test_total_evidence_size_is_limited() -> None:
+    half = MAX_EVIDENCE_TOTAL_BYTES // 2 + 1
+    with pytest.raises(IngestError, match="5 MB in total"):
+        load_files([Upload("a.txt", b"a" * half, None), Upload("b.txt", b"b" * half, None)])
+
+
+def test_cached_dossier_by_id_and_stored_steps() -> None:
+    dossier = build_dossier([Upload("chat.txt", CHAT, None)], None, PARTIES, OfflineClient(), Language.ENGLISH)
+    assert cached_dossier(dossier.dossier_id) is dossier
+    assert dossier.next_steps[-1].title == "Get free legal help if you are eligible"
+    with pytest.raises(ExpiredError):
+        cached_dossier("c" * 64)

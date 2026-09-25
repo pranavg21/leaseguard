@@ -87,7 +87,9 @@ def read_text(data: bytes, kind: EvidenceKind) -> str:
     return scrub_pii(raw.replace("‎", "").replace(" ", " "))
 
 
-def load_evidence(index: int, name: str, data: bytes, client_sha256: str | None) -> EvidenceFile:
+def load_evidence(
+    index: int, name: str, data: bytes, client_sha256: str | None, digest: str | None = None
+) -> EvidenceFile:
     """Fingerprint and read one evidence file.
 
     Args:
@@ -95,6 +97,7 @@ def load_evidence(index: int, name: str, data: bytes, client_sha256: str | None)
         name: The file name supplied by the browser.
         data: File bytes.
         client_sha256: Hash the browser computed before upload, if any.
+        digest: The file's SHA-256 if already computed, so it is never hashed twice.
 
     Returns:
         The evidence file record.
@@ -104,7 +107,7 @@ def load_evidence(index: int, name: str, data: bytes, client_sha256: str | None)
         annexure=f"A-{index + 1}",
         name=safe_name(name),
         kind=kind,
-        sha256=sha256_hex(data),
+        sha256=digest or sha256_hex(data),
         size_bytes=len(data),
         client_sha256=client_sha256,
         text=read_text(data, kind),

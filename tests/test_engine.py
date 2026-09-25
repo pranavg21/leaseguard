@@ -1,7 +1,10 @@
 """Tests for leaseguard/engine.py."""
 
+import pytest
+
 from leaseguard.ai import OfflineClient
-from leaseguard.engine import REPORT_CACHE, analyse, build_finding, coverage_gaps, report_key
+from leaseguard.engine import REPORT_CACHE, analyse, build_finding, cached_report, coverage_gaps, report_key
+from leaseguard.errors import ExpiredError
 from leaseguard.grounding import normalise
 from leaseguard.models import Category, Clause, Language, RiskLevel, Role, UserContext
 from leaseguard.sample import SAMPLE_LEASE
@@ -57,6 +60,19 @@ def test_failed_clauses_skip_audit_and_are_not_cached(tenant_ctx: UserContext) -
     assert report.gaps == []
     assert report.failed_clauses
     assert len(REPORT_CACHE) == 0
+    assert report.report_id == ""
+
+
+def test_cached_report_by_id_and_derived_data_computed_once(tenant_ctx: UserContext) -> None:
+    report = analyse(SAMPLE_LEASE, tenant_ctx, OfflineClient())
+    assert len(report.report_id) == 64
+    assert cached_report(report.report_id) is report
+    assert report.key_terms[0].label == "Monthly rent"
+    assert report.next_steps[-1].title == "Get free legal help if you are eligible"
+    with pytest.raises(ExpiredError) as caught:
+        cached_report("0" * 64)
+    assert caught.value.status == 404
+    assert caught.value.code == "expired"
 
 
 def test_injected_instructions_cannot_change_ratings(client: OfflineClient, tenant_ctx: UserContext) -> None:

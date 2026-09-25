@@ -1,30 +1,31 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { download, init, runAction } from '../../static/js/main.js';
+import { DOSSIER_LOAD_ERROR, download, dossierLoadFailed, init, runAction } from '../../static/js/main.js';
 import { fakeFetch, flush, loadPage } from './helpers.mjs';
 
 const LEASE = 'x'.repeat(600);
-const REPORT = { counts: { HIGH: 0, MEDIUM: 0, FAIR: 1 }, findings: [], gaps: [], coverage_complete: true, context_notes: [], key_terms: [], next_steps: [] };
+const REPORT_ID = 'f'.repeat(64);
+const REPORT = { report_id: REPORT_ID, counts: { HIGH: 0, MEDIUM: 0, FAIR: 1 }, findings: [], gaps: [], coverage_complete: true, context_notes: [], key_terms: [], next_steps: [] };
 const META = { roles: ['tenant', 'landlord'], states: ['Maharashtra'], languages: ['English'], ai_mode: 'offline' };
 
-function routes() {
+function routes(report = REPORT) {
   return fakeFetch({
     '/api/meta': () => ({ body: META }),
     '/api/sample': () => ({ body: { original: LEASE, revised: LEASE } }),
-    '/api/analyze': () => ({ body: REPORT }),
+    '/api/analyze': () => ({ body: report }),
     '/api/ask': () => ({ body: { answer: 'Yes.', grounded: false } }),
     '/api/compare': () => ({ body: { changes: [] } }),
     '/api/packet': () => ({ blob: new Blob(['%PDF-']) }),
   });
 }
 
-async function boot() {
+async function boot(report = REPORT) {
   const { window, document } = loadPage();
   const registered = [];
   Object.defineProperty(window.navigator, 'serviceWorker', { value: { register: async (p) => registered.push(p) } });
   window.URL.createObjectURL = () => 'blob:x';
   window.URL.revokeObjectURL = () => undefined;
-  const fetch = routes();
+  const fetch = routes(report);
   await init(document, window, fetch);
   return { window, document, fetch, registered };
 }
@@ -85,4 +86,40 @@ test('runAction and download helpers', async () => {
   window.URL.revokeObjectURL = (url) => { revoked = url; };
   download(document, window, new Blob(['x']), 'a.pdf');
   assert.equal(revoked, 'blob:y');
+});
+
+test('follow-ups send the report ID, not the agreement', async () => {
+  const { document, fetch } = await boot();
+  document.getElementById('document-text').value = LEASE;
+  submit(document, 'analyze-form');
+  await flush(); await flush();
+  document.getElementById('question').value = 'Can I leave?';
+  submit(document, 'ask-form');
+  document.getElementById('packet-button').click();
+  await flush(); await flush();
+  const bodies = Object.fromEntries(fetch.calls.map((call) => [call.path, call.init.body]));
+  assert.deepEqual(JSON.parse(bodies['/api/ask']), { report_id: REPORT_ID, question: 'Can I leave?' });
+  assert.deepEqual(JSON.parse(bodies['/api/packet']), { report_id: REPORT_ID });
+  assert.ok(bodies['/api/analyze'].includes(LEASE));
+});
+
+test('an uncached report makes follow-ups send the agreement again', async () => {
+  const { document, fetch } = await boot({ ...REPORT, report_id: undefined });
+  document.getElementById('document-text').value = LEASE;
+  submit(document, 'analyze-form');
+  await flush(); await flush();
+  document.getElementById('question').value = 'Can I leave?';
+  submit(document, 'ask-form');
+  document.getElementById('packet-button').click();
+  await flush(); await flush();
+  const bodies = Object.fromEntries(fetch.calls.map((call) => [call.path, JSON.parse(call.init.body ?? '{}')]));
+  assert.equal(bodies['/api/ask'].document.text, LEASE);
+  assert.equal(bodies['/api/ask'].question, 'Can I leave?');
+  assert.equal(bodies['/api/packet'].document.text, LEASE);
+});
+
+test('a failed download of the dossier code is announced', () => {
+  const { document } = loadPage();
+  dossierLoadFailed(document)();
+  assert.equal(document.getElementById('dossier-error').textContent, DOSSIER_LOAD_ERROR);
 });

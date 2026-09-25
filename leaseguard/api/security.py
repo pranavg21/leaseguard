@@ -2,7 +2,7 @@
 
 import threading
 import time
-from collections import defaultdict, deque
+from collections import OrderedDict, deque
 from collections.abc import Awaitable, Callable
 
 from starlette.requests import Request
@@ -66,7 +66,11 @@ def client_id(request: Request) -> str:
 
 
 class RateLimiter:
-    """Sliding-window limiter: at most ``limit`` requests per ``window`` seconds per client."""
+    """Sliding-window limiter: at most ``limit`` requests per ``window`` seconds per client.
+
+    Clients are kept in least-recently-seen order, so idle clients are removed from the
+    front in amortised O(1) per request, and memory never exceeds ``max_clients`` entries.
+    """
 
     def __init__(
         self,
@@ -79,12 +83,12 @@ class RateLimiter:
         Args:
             limit: Requests allowed per window.
             window: Window length in seconds.
-            max_clients: Tracked clients above which idle entries are swept, bounding memory.
+            max_clients: Most clients tracked at once; beyond it the least recently seen is dropped.
         """
         self._limit = limit
         self._window = window
         self._max_clients = max_clients
-        self._hits: defaultdict[str, deque[float]] = defaultdict(deque)
+        self._hits: OrderedDict[str, deque[float]] = OrderedDict()
         self._lock = threading.Lock()
 
     def allow(self, key: str, now: float | None = None) -> bool:
@@ -99,9 +103,7 @@ class RateLimiter:
         """
         current = time.monotonic() if now is None else now
         with self._lock:
-            if len(self._hits) >= self._max_clients:
-                self._sweep(current)
-            hits = self._hits[key]
+            hits = self._track(key, current)
             while hits and current - hits[0] >= self._window:
                 hits.popleft()
             if len(hits) >= self._limit:
@@ -109,10 +111,23 @@ class RateLimiter:
             hits.append(current)
             return True
 
-    def _sweep(self, now: float) -> None:
-        idle = [key for key, hits in self._hits.items() if not hits or now - hits[-1] >= self._window]
-        for key in idle:
-            del self._hits[key]
+    def _track(self, key: str, now: float) -> deque[float]:
+        hits = self._hits.get(key)
+        if hits is not None:
+            self._hits.move_to_end(key)
+            return hits
+        self._drop_idle(now)
+        if len(self._hits) >= self._max_clients:
+            self._hits.popitem(last=False)
+        hits = self._hits[key] = deque()
+        return hits
+
+    def _drop_idle(self, now: float) -> None:
+        while self._hits:
+            oldest = next(iter(self._hits.values()))
+            if oldest and now - oldest[-1] < self._window:
+                return
+            self._hits.popitem(last=False)
 
     def tracked_clients(self) -> int:
         """Return how many clients are currently tracked (for monitoring and tests)."""

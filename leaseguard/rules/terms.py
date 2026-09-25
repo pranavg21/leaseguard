@@ -7,6 +7,8 @@ from leaseguard.models import RiskLevel, RuleResult, UserContext
 from leaseguard.parsing import parse_months
 from leaseguard.rules.bands import Band, first_phrase, grade
 
+_ENTRY_NOTICE = re.compile(r"\d+\s*hours|notice")
+
 _LOCK_IN_WORDS = ("lock-in", "lock in", "notice", "months", "forfeit")
 _ENTRY_WORDS = ("enter", "entry", "inspect", "notice", "any time")
 _NO_NOTICE = ("without notice", "without prior notice", "at any time")
@@ -76,5 +78,5 @@ def rule_entry(raw: str, lowered: str, ctx: UserContext) -> RuleResult:
         The rule outcome.
     """
     del raw, ctx
-    has_period = re.search(r"\d+\s*hours|notice", lowered) is not None
+    has_period = _ENTRY_NOTICE.search(lowered) is not None
     return first_phrase(lowered, _NO_NOTICE, ENTRY_WITHOUT_NOTICE) or (ENTRY_FAIR if has_period else ENTRY_NO_PERIOD)

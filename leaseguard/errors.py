@@ -5,12 +5,23 @@ class LeaseGuardError(Exception):
     """Base class for errors whose message is safe to show to users."""
 
     code = "leaseguard_error"
+    status = 400
 
 
 class IngestError(LeaseGuardError):
     """Raised when an uploaded or pasted document is rejected."""
 
     code = "invalid_document"
+
+
+class ExpiredError(LeaseGuardError):
+    """Raised when a report or dossier ID is no longer held by the server.
+
+    The browser then sends the full request once instead.
+    """
+
+    code = "expired"
+    status = 404
 
 
 def describe_error(error: BaseException) -> str:

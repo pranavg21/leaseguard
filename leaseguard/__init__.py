@@ -6,4 +6,4 @@ context, compares drafts and answers questions with verified quotes. It
 provides information, not legal advice.
 """
 
-__version__ = "2.0.0"
+__version__ = "2.2.0"

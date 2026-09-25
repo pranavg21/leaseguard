@@ -5,6 +5,8 @@ import unicodedata
 
 from leaseguard.constants import MAX_QUOTE_CHARS, MIN_QUOTE_CHARS
 
+_WHITESPACE = re.compile(r"\s+")
+
 _QUOTES = str.maketrans({"“": '"', "”": '"', "‘": "'", "’": "'", "–": "-", "—": "-"})
 # Split after a sentence-ending letter so "Rs. 2,50,000" is never split.
 _SENTENCE_END = re.compile(r"(?<=[a-z)\]][.;])\s+(?=[A-Z(])")
@@ -20,7 +22,7 @@ def normalise(text: str) -> str:
         A comparison-friendly form of the text.
     """
     text = unicodedata.normalize("NFKC", text).translate(_QUOTES)
-    return re.sub(r"\s+", " ", text).strip().lower()
+    return _WHITESPACE.sub(" ", text).strip().lower()
 
 
 class NormalisedText:

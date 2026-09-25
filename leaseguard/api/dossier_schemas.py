@@ -5,7 +5,7 @@ import binascii
 
 from pydantic import Field
 
-from leaseguard.api.schemas import MAX_BASE64_CHARS, DocumentIn, StrictModel
+from leaseguard.api.schemas import MAX_BASE64_CHARS, RESULT_ID_PATTERN, DocumentIn, StrictModel
 from leaseguard.constants import MAX_EVIDENCE_FILES, MAX_FILENAME_CHARS, MAX_PARTY_NAME_CHARS
 from leaseguard.dossier.models import Parties
 from leaseguard.dossier.service import Upload
@@ -61,3 +61,9 @@ class DossierRequest(StrictModel):
     lease: DocumentIn | None = None
     parties: PartiesIn = Field(default_factory=PartiesIn)
     language: Language = Language.ENGLISH
+
+
+class DossierRef(StrictModel):
+    """Body of ``POST /api/dossier/pdf`` that refers to a dossier built earlier instead of re-uploading evidence."""
+
+    dossier_id: str = Field(pattern=RESULT_ID_PATTERN)

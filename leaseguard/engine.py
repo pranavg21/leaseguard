@@ -6,13 +6,15 @@ from leaseguard.ai import LLMClient
 from leaseguard.cache import LRUCache, content_key
 from leaseguard.constants import CACHE_SIZE
 from leaseguard.context_rules import context_notes, frame_for_role
-from leaseguard.errors import describe_error
+from leaseguard.errors import ExpiredError, describe_error
 from leaseguard.grounding import NormalisedText, best_sentence, verify_grounding
 from leaseguard.knowledge import BASELINE, CATEGORY_TITLES, EXPECTED_CATEGORIES, LAWYER_QUESTIONS
 from leaseguard.models import AnalysisReport, Category, Clause, CoverageGap, Finding, UserContext
 from leaseguard.privacy import scrub_pii
 from leaseguard.rules import assess
 from leaseguard.segment import segment_clauses
+from leaseguard.steps import review_steps
+from leaseguard.summary import key_terms
 
 logger = logging.getLogger(__name__)
 
@@ -100,7 +102,7 @@ def _explain(findings: list[Finding], client: LLMClient, ctx: UserContext) -> No
 def _build_report(clean: str, ctx: UserContext, client: LLMClient) -> AnalysisReport:
     findings, failed = _rate_all(segment_clauses(clean), client, ctx, NormalisedText(clean))
     _explain(findings, client, ctx)
-    return AnalysisReport(
+    report = AnalysisReport(
         findings=findings,
         gaps=[] if failed else coverage_gaps(findings),
         coverage_complete=not failed,
@@ -108,6 +110,9 @@ def _build_report(clean: str, ctx: UserContext, client: LLMClient) -> AnalysisRe
         failed_clauses=failed,
         context_notes=context_notes(clean, ctx),
     )
+    report.key_terms = key_terms(report)
+    report.next_steps = review_steps(report)
+    return report
 
 
 def analyse(text: str, ctx: UserContext, client: LLMClient) -> AnalysisReport:
@@ -115,7 +120,9 @@ def analyse(text: str, ctx: UserContext, client: LLMClient) -> AnalysisReport:
 
     PII is scrubbed before anything reaches the AI client. Results are cached
     by content hash; a run in which any clause failed is never cached, so a
-    transient failure cannot become a permanent wrong answer.
+    transient failure cannot become a permanent wrong answer. A cached report
+    carries its key as ``report_id`` so later requests can refer to it instead
+    of uploading the document again.
 
     Args:
         text: Agreement text.
@@ -132,5 +139,24 @@ def analyse(text: str, ctx: UserContext, client: LLMClient) -> AnalysisReport:
         return cached
     report = _build_report(clean, ctx, client)
     if report.coverage_complete:
+        report.report_id = key
         REPORT_CACHE.put(key, report)
+    return report
+
+
+def cached_report(report_id: str) -> AnalysisReport:
+    """Return a report analysed earlier, without the document being sent again.
+
+    Args:
+        report_id: The ``report_id`` returned with the report.
+
+    Returns:
+        The cached report.
+
+    Raises:
+        ExpiredError: If the report is no longer cached on this server.
+    """
+    report = REPORT_CACHE.get(report_id)
+    if report is None:
+        raise ExpiredError("This review has expired. Sending the agreement again.")
     return report

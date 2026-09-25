@@ -104,9 +104,31 @@ class CoverageGap:
     message: str
 
 
+@dataclass(frozen=True)
+class KeyTerm:
+    """One headline term. ``quote`` is copied from the agreement, or empty if not stated."""
+
+    label: str
+    value: str
+    quote: str
+
+
+@dataclass(frozen=True)
+class Step:
+    """One action the user can take, in plain language."""
+
+    title: str
+    detail: str
+
+
 @dataclass
 class AnalysisReport:
-    """Complete result of analysing one document."""
+    """Complete result of analysing one document.
+
+    ``key_terms`` and ``next_steps`` are derived once when the report is built and
+    reused by the web view and the PDF. ``report_id`` is the cache key; it is empty
+    when the report was not cached, so later requests must send the document again.
+    """
 
     findings: list[Finding]
     gaps: list[CoverageGap]
@@ -114,6 +136,9 @@ class AnalysisReport:
     context: UserContext
     failed_clauses: list[int] = field(default_factory=list)
     context_notes: list[str] = field(default_factory=list)
+    key_terms: list[KeyTerm] = field(default_factory=list)
+    next_steps: list[Step] = field(default_factory=list)
+    report_id: str = ""
 
     def counts(self) -> dict[RiskLevel, int]:
         """Return the number of findings at each risk level."""

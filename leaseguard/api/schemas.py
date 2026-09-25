@@ -13,6 +13,7 @@ from leaseguard.models import Language, Role, UserContext
 
 _BASE64_OVERHEAD = 4 / 3
 MAX_BASE64_CHARS = int(MAX_UPLOAD_BYTES * _BASE64_OVERHEAD) + 4
+RESULT_ID_PATTERN = r"^[0-9a-f]{64}$"
 
 
 class StrictModel(BaseModel):
@@ -82,7 +83,19 @@ class AnalyzeRequest(StrictModel):
 
 
 class AskRequest(AnalyzeRequest):
-    """Body of ``POST /api/ask``."""
+    """Body of ``POST /api/ask`` when the agreement is sent again."""
+
+    question: str = Field(min_length=1, max_length=MAX_QUESTION_CHARS)
+
+
+class ReportRef(StrictModel):
+    """Body of ``POST /api/packet`` that refers to a report reviewed earlier instead of re-uploading it."""
+
+    report_id: str = Field(pattern=RESULT_ID_PATTERN)
+
+
+class AskRef(ReportRef):
+    """Body of ``POST /api/ask`` that refers to a report reviewed earlier."""
 
     question: str = Field(min_length=1, max_length=MAX_QUESTION_CHARS)
 

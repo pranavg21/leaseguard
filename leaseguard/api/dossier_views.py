@@ -3,7 +3,6 @@
 from leaseguard.api.views import JsonDict, steps_view
 from leaseguard.dossier.certificate import build_certificate
 from leaseguard.dossier.models import EVENT_TITLES, Dossier, Event, EvidenceFile
-from leaseguard.dossier.next_steps import dossier_steps
 
 
 def file_view(evidence: EvidenceFile) -> JsonDict:
@@ -71,5 +70,6 @@ def dossier_view(dossier: Dossier) -> JsonDict:
         "limitation_deadline": dossier.limitation_deadline.isoformat() if dossier.limitation_deadline else None,
         "checklist": dossier.checklist,
         "certificate_title": certificate.title,
-        "next_steps": steps_view(dossier_steps(dossier)),
+        "next_steps": steps_view(dossier.next_steps),
+        "dossier_id": dossier.dossier_id or None,
     }

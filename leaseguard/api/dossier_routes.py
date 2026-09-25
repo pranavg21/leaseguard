@@ -3,14 +3,14 @@
 from fastapi import APIRouter, Request
 from fastapi.responses import Response
 
-from leaseguard.api.dossier_schemas import DossierRequest
+from leaseguard.api.dossier_schemas import DossierRef, DossierRequest
 from leaseguard.api.dossier_views import dossier_view
 from leaseguard.api.routes import llm_client
 from leaseguard.api.views import JsonDict
 from leaseguard.dossier.dates import today_ist
 from leaseguard.dossier.models import Dossier
 from leaseguard.dossier.pdf import build_dossier_pdf
-from leaseguard.dossier.service import build_dossier
+from leaseguard.dossier.service import build_dossier, cached_dossier
 
 router = APIRouter(prefix="/api/dossier")
 
@@ -37,16 +37,17 @@ def dossier(body: DossierRequest, request: Request) -> JsonDict:
 
 
 @router.post("/pdf")
-def dossier_pdf(body: DossierRequest, request: Request) -> Response:
+def dossier_pdf(body: DossierRef | DossierRequest, request: Request) -> Response:
     """Build the dossier PDF with the certificate and demand notice drafts.
 
     Args:
-        body: The validated request.
+        body: A ``dossier_id`` from an earlier build, or the full evidence.
         request: The incoming request.
 
     Returns:
         The PDF as an attachment.
     """
-    pdf = build_dossier_pdf(_build(body, request), today_ist())
+    dossier = cached_dossier(body.dossier_id) if isinstance(body, DossierRef) else _build(body, request)
+    pdf = build_dossier_pdf(dossier, today_ist())
     headers = {"Content-Disposition": 'attachment; filename="leaseguard-dossier.pdf"', "Cache-Control": "no-store"}
     return Response(content=pdf, media_type="application/pdf", headers=headers)

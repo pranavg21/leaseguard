@@ -48,13 +48,15 @@ DOSSIER_CACHE_SIZE: Final = 8
 RATE_LIMIT_REQUESTS: Final = 30
 RATE_LIMIT_WINDOW_SECONDS: Final = 60.0
 RATE_LIMIT_MAX_CLIENTS: Final = 10_000
-STATIC_MAX_AGE_SECONDS: Final = 86_400
 GZIP_MIN_BYTES: Final = 1_000
+GZIP_LEVEL: Final = 6  # the usual speed/size balance; level 9 costs far more CPU for little gain
 HSTS_MAX_AGE_SECONDS: Final = 63_072_000
 PDF_MARGIN_MM: Final = 18
 
 # Deposit-recovery dossier
 MAX_EVIDENCE_FILES: Final = 10
+# All evidence files together; base64 adds a third, which keeps the request under MAX_REQUEST_BYTES.
+MAX_EVIDENCE_TOTAL_BYTES: Final = 5 * 1024 * 1024
 MAX_PARTY_NAME_CHARS: Final = 80
 LIMITATION_YEARS: Final = 3
 NOTICE_REPLY_DAYS: Final = 15

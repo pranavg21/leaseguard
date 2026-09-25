@@ -81,3 +81,13 @@ def test_dossier_includes_next_steps(api: TestClient) -> None:
     titles = [step["title"] for step in result["next_steps"]]
     assert "Try a free pre-litigation Lok Adalat" in titles
     assert titles[-1] == "Get free legal help if you are eligible"
+
+
+def test_dossier_pdf_by_id_without_re_uploading(api: TestClient) -> None:
+    dossier_id = api.post("/api/dossier", json={"files": [encoded(CHAT)]}).json()["dossier_id"]
+    assert isinstance(dossier_id, str)
+    assert len(dossier_id) == 64
+    assert api.post("/api/dossier/pdf", json={"dossier_id": dossier_id}).content.startswith(b"%PDF-")
+    expired = api.post("/api/dossier/pdf", json={"dossier_id": "b" * 64})
+    assert (expired.status_code, expired.json()["error"]["code"]) == (404, "expired")
+    assert api.post("/api/dossier/pdf", json={"dossier_id": "nope"}).status_code == 422

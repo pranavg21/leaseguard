@@ -9,7 +9,6 @@ from reportlab.platypus import Flowable, LongTable, PageBreak, TableStyle
 
 from leaseguard.dossier.certificate import CertificatePart, build_certificate
 from leaseguard.dossier.models import EVENT_TITLES, Contradiction, Dossier
-from leaseguard.dossier.next_steps import dossier_steps
 from leaseguard.dossier.notice import build_notice, rupees
 from leaseguard.export import para, render_pdf, steps_flowables
 
@@ -138,7 +137,7 @@ def dossier_story(dossier: Dossier, today: date, styles: StyleSheet1) -> list[Fl
         *index_section(dossier, styles),
         *dates_section(dossier, styles),
         *findings_section(dossier, styles),
-        *steps_flowables(dossier_steps(dossier), styles),
+        *steps_flowables(dossier.next_steps, styles),
         PageBreak(),
         *certificate_section(dossier, styles),
         PageBreak(),

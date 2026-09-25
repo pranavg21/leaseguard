@@ -89,3 +89,33 @@ test('an early submit is prevented and replayed with requestSubmit', async () =>
   await new Promise((resolve) => setTimeout(resolve, 0));
   assert.equal(replayed, 1);
 });
+
+test('a failed load is reported, not lost, and the next action retries', async () => {
+  const { document } = loadPage();
+  const section = document.getElementById('dossier-section');
+  const errors = [];
+  let attempts = 0;
+  const load = once(async () => {
+    attempts += 1;
+    if (attempts === 1) { throw new TypeError('offline'); }
+  });
+  let replayed = 0;
+  const button = document.getElementById('load-evidence-sample');
+  replayEarlyActions(section, load, (error) => errors.push(error.message));
+  button.click();
+  await new Promise((resolve) => setTimeout(resolve, 0));
+  assert.deepEqual(errors, ['offline']);
+  button.addEventListener('click', () => { replayed += 1; });
+  button.click();
+  await new Promise((resolve) => setTimeout(resolve, 0));
+  assert.equal(attempts, 2);
+  assert.equal(replayed, 1);
+});
+
+test('observer and focus loads report failures instead of rejecting unhandled', async () => {
+  const { window, document } = loadPage();
+  const errors = [];
+  loadWhenNeeded(window, document.getElementById('dossier-section'), () => Promise.reject(new Error('no network')), (e) => errors.push(e.message));
+  await new Promise((resolve) => setTimeout(resolve, 0));
+  assert.deepEqual(errors, ['no network']);
+});

@@ -8,6 +8,9 @@ import { ApiError, MAX_UPLOAD_BYTES, toBase64 } from './api.js';
 /** Maximum number of evidence files per dossier (mirrors the server limit). */
 export const MAX_EVIDENCE_FILES = 10;
 
+/** Maximum size of all evidence files together, in bytes (5 MB; mirrors the server limit). */
+export const MAX_EVIDENCE_TOTAL_BYTES = 5_242_880;
+
 /** Hex digits per byte. */
 const HEX_WIDTH = 2;
 
@@ -40,7 +43,7 @@ export async function prepareFile(file, subtle) {
 }
 
 /**
- * Prepare every selected file, enforcing the file-count limit.
+ * Prepare every selected file, enforcing the count and total-size limits before any file is read.
  * @param {File[]} files - Selected files.
  * @param {SubtleCrypto} subtle - The Web Crypto implementation.
  * @returns {Promise<Array<{name: string, content_base64: string, client_sha256: string}>>} Upload payloads.
@@ -48,6 +51,9 @@ export async function prepareFile(file, subtle) {
 export async function prepareFiles(files, subtle) {
   if (files.length === 0 || files.length > MAX_EVIDENCE_FILES) {
     throw new ApiError(`Choose between 1 and ${MAX_EVIDENCE_FILES} evidence files.`, 0);
+  }
+  if (files.reduce((total, file) => total + file.size, 0) > MAX_EVIDENCE_TOTAL_BYTES) {
+    throw new ApiError('The evidence files are larger than 5 MB in total. Please remove or shrink some files.', 0);
   }
   return Promise.all(files.map((file) => prepareFile(file, subtle)));
 }

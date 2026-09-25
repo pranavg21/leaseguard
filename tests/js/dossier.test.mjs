@@ -6,7 +6,8 @@ import { fakeFetch, flush, loadPage } from './helpers.mjs';
 import { createApi } from '../../static/js/api.js';
 import { download, runAction } from '../../static/js/main.js';
 
-const DOSSIER = { files: [], events: [], ledger: { deposit: null, deposit_source: 'not found', refunded: 0, deductions_claimed: 0, outstanding: null }, contradictions: [], limitation_deadline: null, checklist: [], next_steps: [] };
+const DOSSIER_ID = 'd'.repeat(64);
+const DOSSIER = { dossier_id: DOSSIER_ID, files: [], events: [], ledger: { deposit: null, deposit_source: 'not found', refunded: 0, deductions_claimed: 0, outstanding: null }, contradictions: [], limitation_deadline: null, checklist: [], next_steps: [] };
 
 function page() {
   const { window, document } = loadPage();
@@ -56,6 +57,7 @@ test('sample, build and download flow', async () => {
   document.getElementById('dossier-pdf-button').click();
   await flush(); await flush();
   assert.deepEqual(fetch.calls.map((c) => c.path), ['/api/sample', '/api/dossier', '/api/dossier/pdf']);
+  assert.deepEqual(JSON.parse(fetch.calls[2].init.body), { dossier_id: DOSSIER_ID });
 });
 
 test('errors are announced', async () => {
@@ -64,4 +66,21 @@ test('errors are announced', async () => {
   document.getElementById('dossier-form').dispatchEvent(new window.Event('submit', { cancelable: true }));
   await flush();
   assert.match(document.getElementById('dossier-error').textContent, /between 1 and 10/);
+});
+
+test('without a dossier ID the PDF request sends the evidence again', async () => {
+  const { window, document } = page();
+  const fetch = fakeFetch({
+    '/api/sample': () => ({ body: { evidence: { 'chat.txt': 'hello' } } }),
+    '/api/dossier': () => ({ body: { ...DOSSIER, dossier_id: undefined } }),
+    '/api/dossier/pdf': () => ({ blob: new Blob(['%PDF-']) }),
+  });
+  bindDossier(document, window, { api: createApi(fetch), state: { current: null, samples: null }, run: runAction, download });
+  document.getElementById('load-evidence-sample').click();
+  await flush();
+  document.getElementById('dossier-form').dispatchEvent(new window.Event('submit', { cancelable: true }));
+  await flush(); await flush();
+  document.getElementById('dossier-pdf-button').click();
+  await flush(); await flush();
+  assert.equal(JSON.parse(fetch.calls[2].init.body).files[0].name, 'chat.txt');
 });

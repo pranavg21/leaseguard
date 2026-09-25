@@ -7,6 +7,8 @@ from leaseguard.models import RiskLevel, RuleResult, UserContext
 from leaseguard.parsing import parse_amount, parse_months, parse_percent
 from leaseguard.rules.bands import Band, first_phrase, grade
 
+_REFUND_DEADLINE = re.compile(r"\d+\s*days|within")
+
 _DEPOSIT_WORDS = ("deposit", "refund", "months", "₹", "rs")
 _ESCALATION_WORDS = ("increase", "escalat", "%", "per cent", "percent")
 _MTA = "the 2-month benchmark in the Model Tenancy Act, 2021"
@@ -73,7 +75,7 @@ def rule_deposit(raw: str, lowered: str, ctx: UserContext) -> RuleResult:
     Returns:
         The rule outcome.
     """
-    no_deadline = "refund" in lowered and not re.search(r"\d+\s*days|within", lowered)
+    no_deadline = "refund" in lowered and not _REFUND_DEADLINE.search(lowered)
     return (
         first_phrase(lowered, ("non-refundable", "non refundable"), NON_REFUNDABLE)
         or grade(deposit_months(raw, ctx), DEPOSIT_BANDS, _DEPOSIT_WORDS)

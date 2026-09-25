@@ -82,9 +82,23 @@ def test_rate_limiter_memory_is_bounded() -> None:
     for i in range(3):
         limiter.allow(f"client-{i}", now=0)
     assert limiter.tracked_clients() == 3
-    limiter.allow("client-new", now=20)  # others idle for a full window: swept
+    limiter.allow("client-new", now=20)  # others idle for a full window: dropped from the front
     assert limiter.tracked_clients() == 1
     limiter.allow("a", now=21)
     limiter.allow("b", now=21)
-    limiter.allow("c", now=22)  # at capacity but all active: nothing to sweep
-    assert limiter.tracked_clients() == 4
+    limiter.allow("client-new", now=21)  # seen again: now the most recent
+    limiter.allow("c", now=22)  # full and all active: the least recently seen ("a") is dropped
+    assert limiter.tracked_clients() == 3
+    for _ in range(4):
+        limiter.allow("client-new", now=23)
+    assert not limiter.allow("client-new", now=23)  # a tracked client keeps its window
+    assert limiter.allow("a", now=23)  # "a" was dropped, so it starts a fresh window
+
+
+def test_rate_limiter_drops_only_idle_clients_from_the_front() -> None:
+    limiter = RateLimiter(limit=5, window=10, max_clients=100)
+    for i in range(50):
+        limiter.allow(f"old-{i}", now=0)
+    limiter.allow("recent", now=5)
+    limiter.allow("newcomer", now=12)
+    assert limiter.tracked_clients() == 2

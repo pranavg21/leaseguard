@@ -144,7 +144,7 @@ leaseguard/
   api/              FastAPI app, request schemas, security middleware, routes, views
   logging_config.py JSON logs in Cloud Logging format
 static/             accessible HTML, CSS and ES-module JavaScript; service worker; manifest
-tests/              317 pytest tests; tests/js holds 51 Node tests (jsdom)
+tests/              326 pytest tests; tests/js holds 63 Node tests (jsdom)
 scripts/audit.py    structural audit, run in CI and by the test suite
 ```
 
@@ -158,11 +158,11 @@ All `POST` bodies are JSON and are validated with Pydantic, which rejects unknow
 | GET | `/api/meta` | Roles, states, languages and the current AI mode, so the frontend hard-codes nothing |
 | GET | `/api/sample` | Built-in original and revised sample agreements |
 | POST | `/api/analyze` | Full review |
-| POST | `/api/ask` | Grounded question answering |
+| POST | `/api/ask` | Grounded question answering. Send `report_id` and `question`, or the agreement again |
 | POST | `/api/compare` | Comparison of two drafts |
-| POST | `/api/packet` | PDF consultation packet |
+| POST | `/api/packet` | PDF consultation packet. Send `report_id`, or the agreement again |
 | POST | `/api/dossier` | Deposit-recovery dossier: evidence index, timeline, ledger, contradictions, checklist |
-| POST | `/api/dossier/pdf` | Dossier PDF, including the draft s.63 certificate and demand notice |
+| POST | `/api/dossier/pdf` | Dossier PDF, including the draft s.63 certificate and demand notice. Send `dossier_id`, or the evidence again |
 
 ## Google services
 
@@ -184,7 +184,7 @@ All `POST` bodies are JSON and are validated with Pydantic, which rejects unknow
 - **Input validation:**
   - Every request body is checked against Pydantic schemas with `extra="forbid"` and length limits.
   - Files are identified by their signature (`%PDF-` or UTF-8 text), not by their extension.
-  - Limits: 5 MB per file, 40 pages, 8 MB per request body. Encrypted PDFs are rejected.
+  - Limits: 5 MB per file, 5 MB of evidence in total, 40 pages, 8 MB per request body. Encrypted PDFs are rejected.
 - **HTTP hardening** runs as middleware on every response:
   - A strict **Content-Security-Policy**: `script-src 'self'`, no inline code, `frame-ancestors 'none'`.
   - HSTS, `X-Content-Type-Options`, `X-Frame-Options`, `Referrer-Policy`, `Permissions-Policy`, COOP and CORP headers.
@@ -205,21 +205,26 @@ More detail is in [SECURITY.md](SECURITY.md).
 
 ## Efficiency
 
-Each item below has a test that proves it.
+Every row names the test that proves it.
 
-| Technique | Where | Effect |
-|---|---|---|
-| Batched AI calls | `leaseguard/ai/gemini.py` | At most **two Gemini calls per review** and **one per dossier**, instead of one per clause or message |
-| Content-hash caches for reviews and dossiers | `engine.py`, `dossier/service.py` | Asking a question, comparing drafts or downloading a PDF reuses the analysis already done. **Downloading the dossier PDF makes no second Gemini call.** Failed runs are never cached. |
-| Normalise once per document | `grounding.NormalisedText` | Checking every quote is linear in document size, not quadratic |
-| Bounded rate-limiter memory | `api/security.RateLimiter` | Idle client entries are swept, so memory stays bounded even with many IPs |
-| gzip compression | `GZipMiddleware` | JSON, HTML, JS and CSS are compressed above 1 KB |
-| Static caching | `Cache-Control: public, max-age=86400` on `/static/`, `no-cache` on pages | Assets are revalidated rarely, and pages always stay fresh |
-| **Lazy loading** | `static/js/lazy.js` | The three dossier modules load with a dynamic `import()` only when that section nears the viewport or receives focus |
-| Offline shell | `static/sw.js` | Repeat visits load from cache; API calls are never cached |
-| Worker threads | synchronous FastAPI handlers | PDF parsing and AI calls never block the event loop |
-| No framework, no build step | `static/js/` | About 32 KB of plain ES modules |
-| Slim, non-root container | `Dockerfile` | Installs only pinned runtime dependencies, including `tzdata`, so timezone handling works on slim images |
+| Technique | Where | Effect | Proved by |
+|---|---|---|---|
+| Batched AI calls | `ai/gemini.py` | At most **two Gemini calls per review** and **one per dossier**, not one per clause or message | `test_ai_gemini.py` |
+| Content-hash caches | `engine.py`, `dossier/service.py` | An unchanged agreement or evidence set is never analysed twice. Failed runs are never cached. | `test_engine.py`, `test_dossier_service.py` |
+| **IDs instead of re-uploads** | `/api/ask`, `/api/packet`, `/api/dossier/pdf` | After a review or dossier, follow-ups send a 64-character `report_id` or `dossier_id`, not the document or evidence (up to 8 MB). The server does not decode, parse, hash or call Gemini again. If a server instance no longer holds the result, it answers `404 expired` and the browser sends the full body once. | `test_api_routes.py`, `test_api_dossier.py`, `tests/js/api.test.mjs` |
+| Hash each file once | `dossier/service.Upload.sha256` | One SHA-256 per evidence file, shared by the cache key and the evidence index | `test_dossier_service.py` |
+| Derived once per report | `engine._build_report` | Key terms and next steps are computed once and reused by the page and the PDF; findings are grouped by category in one pass | `test_engine.py` |
+| Normalise once per document | `grounding.NormalisedText` | Checking every quote is linear in document size, not quadratic | `test_grounding.py` |
+| Precompiled patterns | module-level `re.compile` | Every regular expression is compiled once at import; anchor phrases use plain `str.find` | `test_parsing.py`, `test_rules.py` |
+| O(1) rate limiter | `api/security.RateLimiter` | Clients are kept in least-recently-seen order: idle ones are dropped from the front and memory is capped at 10,000 clients, with no full scans | `test_api_security.py` |
+| Size checks before work | `static/js/api.js`, `evidence.js` | Oversized files or bodies are refused in the browser before hashing, encoding or uploading, matching the server limits (5 MB of evidence, 8 MB per request) | `tests/js/api.test.mjs`, `tests/js/evidence.test.mjs` |
+| **Real lazy loading** | `static/js/lazy.js`, `static/sw.js` | The three dossier modules (about 9.5 KB) are not in the first-screen download or the service worker's install list. They load with `import()` when that section nears the viewport, gets focus or is clicked. A failed load is reported and retried. | `tests/js/lazy.test.mjs`, `tests/js/sw.test.mjs` |
+| Stale-while-revalidate service worker | `static/sw.js` | Repeat visits and offline use are served from cache at once, while the cached copy is refreshed in the background; API calls are never cached | `tests/js/sw.test.mjs` |
+| Revalidating HTTP cache | `api/app._revalidate_static` | File names are not versioned, so static files use `no-cache` with ETags: an unchanged file costs a `304` with no body, and a deploy is never masked by a stale cache | `test_api_app.py` |
+| gzip where it helps | `api/app.SelectiveGZip` | JSON, HTML, JS and CSS above 1 KB are compressed at level 6. PDFs, which are already compressed, are skipped. | `test_api_app.py` |
+| Worker threads | synchronous FastAPI handlers | PDF parsing and AI calls never block the event loop | — |
+| No framework, no build step | `static/js/` | About 29 KB of plain ES modules on the first screen (about 9 KB gzipped) | — |
+| Slim, non-root container | `Dockerfile` | Installs only pinned runtime dependencies, including `tzdata` | — |
 
 ## Accessibility
 
@@ -238,8 +243,8 @@ Accessibility was checked with **axe-core** against WCAG 2.2 AA and best practic
 
 | Gate | Result |
 |---|---|
-| `pytest --cov` | 317 tests, **100% line and branch coverage**, fails below 95% |
-| `node --test` (jsdom) | 51 tests covering every JS module and the service worker |
+| `pytest --cov` | 326 tests, **100% line and branch coverage**, fails below 95% |
+| `node --test` (jsdom) | 63 tests covering every JS module and the service worker |
 | `ruff check` | Almost every rule set enabled (`select = ["ALL"]`), Google-style docstrings |
 | `mypy` | `strict = true`, no `type: ignore` in source |
 | `pylint` duplicate-code | 10.00/10 |

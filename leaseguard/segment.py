@@ -5,6 +5,8 @@ import re
 from leaseguard.constants import MAX_HEADING_CHARS, MIN_CLAUSE_CHARS
 from leaseguard.models import Clause
 
+_BLANK_LINES = re.compile(r"\n\s*\n")
+
 _NUMBERING = r"(?:clause|article|section)\s+\d+[.:)]?|\d{1,2}(?:\.\d{1,2})*[.)]|[IVXLC]{1,6}[.)]"
 _HEADING = re.compile(rf"^\s*(?:{_NUMBERING}|[A-Z][A-Za-z &/-]{{2,40}}:)", re.IGNORECASE)
 _HEADING_PARTS = re.compile(rf"^\s*({_NUMBERING})?\s*([^:.]{{0,50}})", re.IGNORECASE)
@@ -26,7 +28,7 @@ def segment_clauses(text: str) -> list[Clause]:
     """
     blocks = _headed_blocks(text)
     if len(blocks) < _MIN_HEADED_BLOCKS:
-        blocks = [[p.strip()] for p in re.split(r"\n\s*\n", text) if p.strip()]
+        blocks = [[p.strip()] for p in _BLANK_LINES.split(text) if p.strip()]
     clauses: list[Clause] = []
     for block in blocks:
         body = " ".join(block)

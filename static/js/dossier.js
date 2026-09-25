@@ -3,6 +3,7 @@
  * Wire the deposit-recovery form: hash files in the browser, build the dossier, download the PDF.
  */
 
+import { postReference } from './api.js';
 import { renderDossier } from './dossier_render.js';
 import { byId } from './forms.js';
 import { prepareFiles, sampleFiles } from './evidence.js';
@@ -58,11 +59,15 @@ export function bindDossier(doc, win, deps) {
     event.preventDefault();
     run(doc, ids, async () => {
       state.dossier = await dossierBody(doc, state, win.crypto.subtle);
-      renderDossier(doc, byId(doc, 'dossier'), await api.postJson('/api/dossier', state.dossier));
+      const dossier = await api.postJson('/api/dossier', state.dossier);
+      state.dossierId = dossier.dossier_id ?? null;
+      renderDossier(doc, byId(doc, 'dossier'), dossier);
       byId(doc, 'dossier-pdf-button').hidden = false;
     });
   });
   byId(doc, 'dossier-pdf-button').addEventListener('click', () => run(doc, { ...ids, button: 'dossier-pdf-button' }, async () => {
-    download(doc, win, await api.postForBlob('/api/dossier/pdf', state.dossier), 'leaseguard-dossier.pdf');
+    const reference = state.dossierId && { dossier_id: state.dossierId };
+    const pdf = await postReference(api.postForBlob, '/api/dossier/pdf', reference, () => state.dossier);
+    download(doc, win, pdf, 'leaseguard-dossier.pdf');
   }));
 }

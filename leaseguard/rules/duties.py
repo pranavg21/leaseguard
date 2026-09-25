@@ -5,6 +5,8 @@ import re
 from leaseguard.models import RiskLevel, RuleResult, UserContext
 from leaseguard.rules.bands import first_phrase
 
+_ALL_REPAIRS = re.compile(r"all (?:repairs|maintenance)")
+
 _MAINTENANCE_WORDS = ("repair", "structural", "maintenance", "wear")
 _JURISDICTION_WORDS = ("arbitrat", "court", "jurisdiction", "dispute")
 _UNILATERAL_ARBITRATOR = ("appointed by the landlord", "appointed solely by", "nominated by the landlord")
@@ -51,7 +53,7 @@ def rule_maintenance(raw: str, lowered: str, ctx: UserContext) -> RuleResult:
     del raw, ctx
     if "structural" in lowered and "tenant" in lowered and "landlord shall" not in lowered:
         return STRUCTURAL_ON_TENANT
-    if re.search(r"all (?:repairs|maintenance)", lowered) and "minor" not in lowered:
+    if _ALL_REPAIRS.search(lowered) and "minor" not in lowered:
         return ALL_REPAIRS
     return MAINTENANCE_FAIR
 

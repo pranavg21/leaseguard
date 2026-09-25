@@ -69,10 +69,13 @@ def parse_months(text: str, *anchors: str) -> float | None:
     """
     lowered = words_to_digits(text)
     for anchor in anchors:
-        for match in re.finditer(re.escape(anchor), lowered):
-            found = _MONTHS.search(lowered[match.end() : match.end() + MONTH_WINDOW_CHARS])
+        start = lowered.find(anchor)
+        while start != -1:
+            end = start + len(anchor)
+            found = _MONTHS.search(lowered[end : end + MONTH_WINDOW_CHARS])
             if found:
                 return float(found.group(1))
+            start = lowered.find(anchor, end)
     return None
 
 

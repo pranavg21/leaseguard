@@ -4,6 +4,8 @@ from dataclasses import dataclass, field
 from datetime import date
 from enum import StrEnum
 
+from leaseguard.models import Step
+
 
 class EvidenceKind(StrEnum):
     """What an evidence file contains, detected from its content."""
@@ -120,3 +122,5 @@ class Dossier:
     ledger: Ledger
     limitation_deadline: date | None
     checklist: list[str] = field(default_factory=list)
+    next_steps: list[Step] = field(default_factory=list)
+    dossier_id: str = ""

@@ -45,14 +45,24 @@ def test_api_docs_are_disabled(api: TestClient) -> None:
     assert api.get("/docs").status_code == 404
 
 
-def test_responses_are_compressed_and_static_assets_cached(api: TestClient) -> None:
+def test_text_is_compressed_and_static_assets_revalidate(api: TestClient) -> None:
     script = api.get("/static/js/main.js", headers={"Accept-Encoding": "gzip"})
     assert script.headers["content-encoding"] == "gzip"
-    assert script.headers["cache-control"] == "public, max-age=86400"
+    assert script.headers["cache-control"] == "no-cache"
     assert "script-src 'self'" in script.headers["content-security-policy"]
+    unchanged = api.get("/static/js/main.js", headers={"If-None-Match": script.headers["etag"]})
+    assert unchanged.status_code == 304
+    assert unchanged.content == b""
     page = api.get("/", headers={"Accept-Encoding": "gzip"})
     assert page.headers["cache-control"] == "no-cache"
-    assert api.get("/static/missing.js").headers.get("cache-control") != "public, max-age=86400"
+
+
+def test_pdfs_are_not_compressed_again(api: TestClient, sample_body: dict[str, object]) -> None:
+    pdf = api.post("/api/packet", json=sample_body, headers={"Accept-Encoding": "gzip"})
+    assert pdf.content.startswith(b"%PDF-")
+    assert "content-encoding" not in pdf.headers
+    report = api.post("/api/analyze", json=sample_body, headers={"Accept-Encoding": "gzip"})
+    assert report.headers["content-encoding"] == "gzip"
 
 
 def test_dossier_pdf_reuses_the_dossier_without_a_second_ai_call() -> None:

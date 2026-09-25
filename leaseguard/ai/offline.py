@@ -10,6 +10,8 @@ from leaseguard.dossier.models import EventKind, Message
 from leaseguard.grounding import best_sentence
 from leaseguard.models import Category, Clause, Language
 
+_KEYWORD = re.compile(rf"[a-z]{{{MIN_KEYWORD_CHARS},}}")
+
 _STOP_WORDS = frozenset(
     [
         "what",
@@ -60,7 +62,7 @@ def question_keywords(question: str) -> tuple[str, ...]:
     Returns:
         Lower-case words of at least four letters that are not stop words.
     """
-    words = re.findall(rf"[a-z]{{{MIN_KEYWORD_CHARS},}}", question.lower())
+    words = _KEYWORD.findall(question.lower())
     return tuple(w for w in words if w not in _STOP_WORDS)
 
 

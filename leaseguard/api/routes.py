@@ -5,10 +5,18 @@ from fastapi.responses import Response
 
 from leaseguard import __version__
 from leaseguard.ai import LLMClient
-from leaseguard.api.schemas import AnalyzeRequest, AskRequest, CompareRequest, ContextIn, DocumentIn
+from leaseguard.api.schemas import (
+    AnalyzeRequest,
+    AskRef,
+    AskRequest,
+    CompareRequest,
+    ContextIn,
+    DocumentIn,
+    ReportRef,
+)
 from leaseguard.api.views import JsonDict, answer_view, change_view, report_view
 from leaseguard.compare import compare_reports
-from leaseguard.engine import analyse
+from leaseguard.engine import analyse, cached_report
 from leaseguard.export import build_packet
 from leaseguard.knowledge import STATES
 from leaseguard.models import AnalysisReport, Language, Role
@@ -39,6 +47,17 @@ def _analyse(request: Request, document: DocumentIn, context: ContextIn) -> Anal
     recorder: Recorder = request.app.state.recorder
     recorder.record(analysis_event(report, client.name))
     return report
+
+
+def _report_for(request: Request, body: AnalyzeRequest | ReportRef) -> AnalysisReport:
+    """Return the report a follow-up request refers to.
+
+    A ``report_id`` reuses the cached report, so the agreement is not uploaded,
+    decoded or parsed again. A full body is analysed (a cache hit if unchanged).
+    """
+    if isinstance(body, ReportRef):
+        return cached_report(body.report_id)
+    return analyse(body.document.resolve(), body.context.to_context(), llm_client(request))
 
 
 @router.get("/health")
@@ -94,19 +113,19 @@ def analyze(body: AnalyzeRequest, request: Request) -> JsonDict:
 
 
 @router.post("/ask")
-def ask_question(body: AskRequest, request: Request) -> JsonDict:
+def ask_question(body: AskRef | AskRequest, request: Request) -> JsonDict:
     """Answer a question about an agreement with a verified quote.
 
     Args:
-        body: The validated request.
+        body: A ``report_id`` from an earlier review, or the agreement itself, plus the question.
         request: The incoming request.
 
     Returns:
         The grounded answer.
     """
-    report = analyse(body.document.resolve(), body.context.to_context(), llm_client(request))
+    report = _report_for(request, body)
     clauses = [finding.clause for finding in report.findings]
-    return answer_view(ask(body.question, clauses, llm_client(request), body.context.language))
+    return answer_view(ask(body.question, clauses, llm_client(request), report.context.language))
 
 
 @router.post("/compare")
@@ -126,16 +145,16 @@ def compare(body: CompareRequest, request: Request) -> JsonDict:
 
 
 @router.post("/packet")
-def packet(body: AnalyzeRequest, request: Request) -> Response:
+def packet(body: ReportRef | AnalyzeRequest, request: Request) -> Response:
     """Build the lawyer consultation packet PDF.
 
     Args:
-        body: The validated request.
+        body: A ``report_id`` from an earlier review, or the agreement itself.
         request: The incoming request.
 
     Returns:
         The PDF as an attachment.
     """
-    pdf = build_packet(_analyse(request, body.document, body.context))
+    pdf = build_packet(_report_for(request, body))
     headers = {"Content-Disposition": 'attachment; filename="leaseguard-packet.pdf"', "Cache-Control": "no-store"}
     return Response(content=pdf, media_type="application/pdf", headers=headers)

@@ -2,10 +2,12 @@
 
 import base64
 
+import pytest
 from fastapi.testclient import TestClient
 
 import leaseguard.api
 from leaseguard.api.routes import router
+from leaseguard.api.schemas import DocumentIn
 from leaseguard.sample import SAMPLE_LEASE, SAMPLE_LEASE_REVISED
 from tests.conftest import MemoryRecorder
 
@@ -79,3 +81,28 @@ def test_analyze_returns_key_terms_and_next_steps(api: TestClient, sample_body: 
         "quote": "2. Rent: The Tenant shall pay a monthly rent of Rs. 25,000 on or before the 5th of every month.",
     }
     assert body["next_steps"][-1]["title"] == "Get free legal help if you are eligible"
+
+
+def test_follow_ups_by_report_id_skip_the_document(
+    api: TestClient, sample_body: JSON, recorder: MemoryRecorder, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    report_id = api.post("/api/analyze", json=sample_body).json()["report_id"]
+    assert isinstance(report_id, str)
+    assert len(report_id) == 64
+
+    def never_parse(_: DocumentIn) -> str:
+        raise AssertionError("the document must not be decoded again")
+
+    monkeypatch.setattr(DocumentIn, "resolve", never_parse)
+    answer = api.post("/api/ask", json={"report_id": report_id, "question": "Can the landlord enter?"}).json()
+    assert answer["heading"] == "6. Entry"
+    assert api.post("/api/packet", json={"report_id": report_id}).content.startswith(b"%PDF-")
+    assert len(recorder.events) == 1
+
+
+def test_unknown_or_invalid_report_ids(api: TestClient, sample_body: JSON) -> None:
+    expired = api.post("/api/packet", json={"report_id": "a" * 64})
+    assert expired.status_code == 404
+    assert expired.json()["error"]["code"] == "expired"
+    assert api.post("/api/ask", json={"report_id": "A" * 64, "question": "q"}).status_code == 422
+    assert api.post("/api/packet", json={**sample_body, "report_id": "a" * 64}).status_code == 422
