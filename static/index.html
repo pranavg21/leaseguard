@@ -1,0 +1,151 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="description" content="LeaseGuard explains Indian rental agreements in plain language: what is unusual, what is missing, and what to ask a lawyer.">
+  <meta name="theme-color" content="#1a3fa0">
+  <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self'; style-src 'self'; img-src 'self' data:; connect-src 'self'; font-src 'self'; manifest-src 'self'; worker-src 'self'; object-src 'none'; base-uri 'none'; form-action 'self'; frame-ancestors 'none'">
+  <title>LeaseGuard: rental agreement checker</title>
+  <link rel="manifest" href="/manifest.webmanifest">
+  <link rel="icon" href="/icon.svg" type="image/svg+xml">
+  <link rel="stylesheet" href="/static/css/styles.css">
+  <script type="module" src="/static/js/main.js"></script>
+</head>
+<body>
+  <a class="skip-link" href="#main">Skip to main content</a>
+  <header class="site-header">
+    <p class="brand"><span aria-hidden="true">📄</span> LeaseGuard</p>
+    <p class="mode" id="ai-mode" aria-live="polite">Checking AI mode…</p>
+  </header>
+
+  <main id="main" tabindex="-1">
+    <h1>Check your rental agreement before you sign</h1>
+    <p class="lede">Before you sign: see what is unusual, what is missing and what to ask a lawyer. After you move out: turn your evidence into a verified dossier to get your deposit back. Every quote is checked against your documents.</p>
+    <p class="disclaimer"><strong>Information, not legal advice.</strong> Personal IDs (Aadhaar, PAN, phone, email) are removed before any AI call. Documents are not stored.</p>
+
+    <section aria-labelledby="setup-heading" class="card">
+      <h2 id="setup-heading">1. Your situation and agreement</h2>
+      <form id="analyze-form" novalidate>
+        <fieldset>
+          <legend>I am the</legend>
+          <div class="choices" id="role-options"></div>
+        </fieldset>
+        <div class="grid">
+          <div class="field">
+            <label for="state">State where the property is</label>
+            <select id="state" name="state" required></select>
+          </div>
+          <div class="field">
+            <label for="rent">Monthly rent in rupees</label>
+            <input id="rent" name="rent" type="number" inputmode="numeric" min="1" max="10000000" step="1" aria-describedby="rent-help">
+            <p class="help" id="rent-help">Used to convert a rupee deposit into months of rent. Optional.</p>
+          </div>
+          <div class="field">
+            <label for="language">Explanation language</label>
+            <select id="language" name="language" aria-describedby="language-help"></select>
+            <p class="help" id="language-help">Hindi and Marathi need the Gemini AI mode.</p>
+          </div>
+        </div>
+        <div class="field">
+          <label for="document-text">Agreement text</label>
+          <textarea id="document-text" name="text" rows="10" aria-describedby="document-help"></textarea>
+          <p class="help" id="document-help">Paste the agreement, upload a PDF or text file below, or load the sample.</p>
+        </div>
+        <div class="field">
+          <label for="document-file">Or upload a PDF or text file (maximum 5 MB)</label>
+          <input id="document-file" name="file" type="file" accept=".pdf,.txt,application/pdf,text/plain">
+        </div>
+        <div class="actions">
+          <button type="button" class="secondary" id="load-sample">Load sample agreement</button>
+          <button type="submit" id="analyze-button">Review agreement</button>
+        </div>
+        <p class="error" id="analyze-error" role="alert"></p>
+      </form>
+    </section>
+
+    <section aria-labelledby="results-heading" class="card" id="results-section" hidden>
+      <h2 id="results-heading" tabindex="-1">2. Review</h2>
+      <div id="results" aria-live="polite" aria-busy="false"></div>
+      <button type="button" id="packet-button">Download lawyer consultation packet (PDF)</button>
+    </section>
+
+    <section aria-labelledby="ask-heading" class="card" id="ask-section" hidden>
+      <h2 id="ask-heading">3. Ask your agreement</h2>
+      <form id="ask-form" novalidate>
+        <div class="field">
+          <label for="question">Your question</label>
+          <input id="question" name="question" type="text" maxlength="500" required autocomplete="off" aria-describedby="question-help">
+          <p class="help" id="question-help">For example: How much notice must I give before leaving?</p>
+        </div>
+        <button type="submit" id="ask-button">Ask</button>
+        <p class="error" id="ask-error" role="alert"></p>
+      </form>
+      <div id="answer" aria-live="polite"></div>
+    </section>
+
+    <section aria-labelledby="compare-heading" class="card">
+      <h2 id="compare-heading">4. Compare two drafts</h2>
+      <p>See which terms got better or worse between the landlord's original and revised versions.</p>
+      <form id="compare-form" novalidate>
+        <div class="grid two">
+          <div class="field">
+            <label for="original-text">Original draft</label>
+            <textarea id="original-text" rows="8" required></textarea>
+          </div>
+          <div class="field">
+            <label for="revised-text">Revised draft</label>
+            <textarea id="revised-text" rows="8" required></textarea>
+          </div>
+        </div>
+        <div class="actions">
+          <button type="button" class="secondary" id="load-compare-sample">Load sample drafts</button>
+          <button type="submit" id="compare-button">Compare drafts</button>
+        </div>
+        <p class="error" id="compare-error" role="alert"></p>
+      </form>
+      <div id="comparison" aria-live="polite"></div>
+    </section>
+    <section aria-labelledby="dossier-heading" class="card">
+      <h2 id="dossier-heading">5. Recover your deposit</h2>
+      <p>Moved out and the deposit is not back? Add your WhatsApp export, receipts and emails. LeaseGuard fingerprints each file, builds a dated timeline where every entry quotes your evidence word for word, and drafts a Section 63 evidence certificate and a demand notice for you to check and sign.</p>
+      <form id="dossier-form" novalidate>
+        <div class="field">
+          <label for="evidence-files">Evidence files (WhatsApp .txt export, PDF, text or images; up to 10 files, 5 MB each)</label>
+          <input id="evidence-files" type="file" multiple accept=".txt,.pdf,.png,.jpg,.jpeg,.webp,text/plain,application/pdf,image/png,image/jpeg,image/webp" aria-describedby="evidence-help">
+          <p class="help" id="evidence-help">Each file's SHA-256 fingerprint is computed in your browser before upload and checked again on the server.</p>
+        </div>
+        <div class="grid">
+          <div class="field">
+            <label for="tenant-name">Your name</label>
+            <input id="tenant-name" type="text" maxlength="80" autocomplete="name">
+          </div>
+          <div class="field">
+            <label for="landlord-name">Landlord's name</label>
+            <input id="landlord-name" type="text" maxlength="80" autocomplete="off">
+          </div>
+          <div class="field">
+            <label for="property-address">Property address</label>
+            <input id="property-address" type="text" maxlength="160" autocomplete="street-address">
+          </div>
+        </div>
+        <div class="field">
+          <input id="use-lease" type="checkbox" checked>
+          <label for="use-lease" class="inline">Use the agreement from step 1 to confirm the deposit amount</label>
+        </div>
+        <div class="actions">
+          <button type="button" class="secondary" id="load-evidence-sample">Load sample evidence</button>
+          <button type="submit" id="dossier-button">Build dossier</button>
+        </div>
+        <p class="error" id="dossier-error" role="alert"></p>
+      </form>
+      <div id="dossier" aria-live="polite"></div>
+      <button type="button" id="dossier-pdf-button" hidden>Download dossier PDF (index, dates, certificate, notice)</button>
+    </section>
+  </main>
+
+  <footer class="site-footer">
+    <p>LeaseGuard gives information to help you prepare questions for a lawyer. It does not replace professional legal advice.</p>
+  </footer>
+</body>
+</html>

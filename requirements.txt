@@ -1,0 +1,8 @@
+# Runtime dependencies, pinned to the versions the test suite runs against.
+fastapi==0.141.1
+uvicorn==0.46.0
+pydantic==2.13.3
+pypdf==6.19.0
+reportlab==4.4.10
+google-genai==2.25.0
+google-cloud-firestore==2.31.0

@@ -1,0 +1,116 @@
+/* LeaseGuard styles. Colours meet WCAG AA contrast; risk is never shown by colour alone. */
+:root {
+  --ink: #111827;
+  --muted: #374151;
+  --paper: #ffffff;
+  --page: #f3f4f6;
+  --line: #9ca3af;
+  --brand: #1a3fa0;
+  --brand-ink: #ffffff;
+  --focus: #b45309;
+  --high-ink: #7f1d1d;
+  --high-bg: #fee2e2;
+  --medium-ink: #713f12;
+  --medium-bg: #fef3c7;
+  --fair-ink: #14532d;
+  --fair-bg: #dcfce7;
+  --radius: 8px;
+  --space: 1rem;
+  font-family: system-ui, -apple-system, "Segoe UI", Roboto, "Noto Sans", sans-serif;
+  line-height: 1.5;
+  color: var(--ink);
+  background: var(--page);
+}
+
+body { margin: 0; }
+main, .site-header, .site-footer { max-width: 60rem; margin: 0 auto; padding: 0 var(--space); }
+
+.skip-link {
+  position: absolute;
+  left: var(--space);
+  top: -3rem;
+  background: var(--brand);
+  color: var(--brand-ink);
+  padding: 0.5rem 1rem;
+  border-radius: var(--radius);
+  z-index: 10;
+}
+.skip-link:focus { top: var(--space); }
+
+:focus-visible { outline: 3px solid var(--focus); outline-offset: 2px; }
+
+.site-header { display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; }
+.brand { font-weight: 700; font-size: 1.25rem; }
+.mode, .help, .lede { color: var(--muted); }
+.disclaimer { border-left: 4px solid var(--brand); padding-left: 0.75rem; }
+
+.card {
+  background: var(--paper);
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  padding: var(--space);
+  margin: var(--space) 0;
+}
+
+fieldset { border: 1px solid var(--line); border-radius: var(--radius); }
+.choices { display: flex; gap: var(--space); }
+.grid { display: grid; gap: var(--space); grid-template-columns: repeat(auto-fit, minmax(14rem, 1fr)); }
+.field { margin: var(--space) 0; }
+label { display: block; font-weight: 600; }
+.choices label, label.inline { display: inline; font-weight: 400; }
+.hash { font-family: ui-monospace, Menlo, Consolas, monospace; word-break: break-all; }
+
+input, select, textarea, button { font: inherit; }
+input[type="text"], input[type="number"], select, textarea {
+  width: 100%;
+  box-sizing: border-box;
+  padding: 0.5rem;
+  border: 1px solid var(--muted);
+  border-radius: var(--radius);
+  background: var(--paper);
+  color: var(--ink);
+}
+
+button {
+  background: var(--brand);
+  color: var(--brand-ink);
+  border: 2px solid var(--brand);
+  border-radius: var(--radius);
+  padding: 0.6rem 1.2rem;
+  cursor: pointer;
+  min-height: 44px;
+}
+button.secondary { background: var(--paper); color: var(--brand); }
+button:disabled { opacity: 0.6; cursor: progress; }
+.actions { display: flex; gap: var(--space); flex-wrap: wrap; }
+
+.error { color: var(--high-ink); font-weight: 600; }
+.error:empty { display: none; }
+
+.badge { display: inline-block; padding: 0.1rem 0.6rem; border: 2px solid currentColor; border-radius: 999px; font-weight: 700; }
+.risk-HIGH { color: var(--high-ink); background: var(--high-bg); }
+.risk-MEDIUM { color: var(--medium-ink); background: var(--medium-bg); }
+.risk-FAIR { color: var(--fair-ink); background: var(--fair-bg); }
+
+.counts { display: flex; gap: var(--space); flex-wrap: wrap; padding: 0; list-style: none; }
+.counts li { padding: 0.5rem 1rem; border-radius: var(--radius); }
+.finding { border-top: 1px solid var(--line); padding: 0.5rem 0; }
+.finding summary { cursor: pointer; font-weight: 600; }
+blockquote { margin: 0.5rem 0; padding-left: 0.75rem; border-left: 4px solid var(--line); font-style: italic; }
+.note { background: var(--page); padding: 0.5rem 0.75rem; border-radius: var(--radius); }
+
+table { border-collapse: collapse; width: 100%; }
+caption { text-align: left; font-weight: 600; padding-bottom: 0.5rem; }
+th, td { border: 1px solid var(--line); padding: 0.5rem; text-align: left; vertical-align: top; }
+
+.visually-hidden {
+  position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after { animation: none !important; transition: none !important; scroll-behavior: auto !important; }
+}
+
+@media (forced-colors: active) {
+  .badge { border-color: CanvasText; }
+}

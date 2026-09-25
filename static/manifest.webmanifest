@@ -1,0 +1,14 @@
+{
+  "name": "LeaseGuard: rental agreement checker",
+  "short_name": "LeaseGuard",
+  "description": "Plain-language risk review for Indian rental agreements, with verified quotes.",
+  "start_url": "/",
+  "scope": "/",
+  "display": "standalone",
+  "background_color": "#f3f4f6",
+  "theme_color": "#1a3fa0",
+  "lang": "en-IN",
+  "icons": [
+    { "src": "/icon.svg", "sizes": "any", "type": "image/svg+xml", "purpose": "any" }
+  ]
+}
