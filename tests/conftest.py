@@ -7,6 +7,7 @@ from fastapi.testclient import TestClient
 
 from leaseguard.ai import OfflineClient
 from leaseguard.api.app import create_app
+from leaseguard.dossier.service import DOSSIER_CACHE
 from leaseguard.engine import REPORT_CACHE
 from leaseguard.models import Clause, Role, UserContext
 from leaseguard.sample import SAMPLE_LEASE
@@ -27,8 +28,10 @@ def _fresh_cache(monkeypatch: pytest.MonkeyPatch) -> Iterator[None]:
     for name in ("GEMINI_API_KEY", "GOOGLE_API_KEY", "FIRESTORE_COLLECTION", "GEMINI_MODEL"):
         monkeypatch.delenv(name, raising=False)
     REPORT_CACHE.clear()
+    DOSSIER_CACHE.clear()
     yield
     REPORT_CACHE.clear()
+    DOSSIER_CACHE.clear()
 
 
 @pytest.fixture

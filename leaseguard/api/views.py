@@ -3,6 +3,8 @@
 from leaseguard.compare import CategoryChange
 from leaseguard.knowledge import BASELINE, CATEGORY_TITLES
 from leaseguard.models import AnalysisReport, Answer, Finding, RiskLevel
+from leaseguard.steps import Step, review_steps
+from leaseguard.summary import key_terms
 
 JsonDict = dict[str, object]
 
@@ -49,7 +51,21 @@ def report_view(report: AnalysisReport) -> JsonDict:
         "gaps": [{"category": g.category.value, "message": g.message} for g in report.gaps],
         "coverage_complete": report.coverage_complete,
         "context_notes": report.context_notes,
+        "key_terms": [{"label": t.label, "value": t.value, "quote": t.quote} for t in key_terms(report)],
+        "next_steps": steps_view(review_steps(report)),
     }
+
+
+def steps_view(steps: list[Step]) -> list[JsonDict]:
+    """Serialise an ordered action plan.
+
+    Args:
+        steps: The steps.
+
+    Returns:
+        JSON-ready dictionaries with a title and detail.
+    """
+    return [{"title": step.title, "detail": step.detail} for step in steps]
 
 
 def answer_view(answer: Answer) -> JsonDict:

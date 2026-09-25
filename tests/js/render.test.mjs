@@ -9,6 +9,8 @@ const FINDING = {
 };
 const REPORT = {
   counts: { HIGH: 1, MEDIUM: 0, FAIR: 0 }, findings: [FINDING], gaps: [], coverage_complete: true, context_notes: ['Register it.'],
+  key_terms: [{ label: 'Monthly rent', value: 'Rs. 25,000', quote: 'rent of Rs. 25,000' }, { label: 'Lock-in', value: 'Not stated', quote: '' }],
+  next_steps: [{ title: 'Negotiate before you sign', detail: 'Ask for the fair baseline.' }],
 };
 
 test('options and role radios', () => {
@@ -68,4 +70,18 @@ test('comparison table has caption and header scopes', () => {
   assert.ok(box.querySelector('caption'));
   assert.equal(box.querySelectorAll('th[scope="col"]').length, 4);
   assert.match(box.querySelector('tbody').textContent, /Better.*High risk.*Not present/);
+});
+
+test('report shows key terms first and next steps last', () => {
+  const { document } = loadPage();
+  const box = document.getElementById('results');
+  renderReport(document, box, REPORT);
+  const terms = box.querySelector('[aria-label="Key terms at a glance"]');
+  assert.ok(terms);
+  assert.match(terms.textContent, /Monthly rent.*Rs\. 25,000/);
+  assert.equal(terms.querySelector('q').textContent, 'rent of Rs. 25,000');
+  const steps = box.querySelector('ol.steps');
+  assert.equal(steps.children.length, 1);
+  assert.match(steps.textContent, /Negotiate before you sign\. Ask for the fair baseline\./);
+  assert.equal(box.lastElementChild, steps);
 });

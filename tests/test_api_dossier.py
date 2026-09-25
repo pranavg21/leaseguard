@@ -74,3 +74,10 @@ def test_bad_evidence_is_a_structured_error(api: TestClient) -> None:
     response = api.post("/api/dossier", json={"files": [{"name": "x.bin", "content_base64": "AP/+"}]})
     assert response.status_code == 400
     assert response.json()["error"]["code"] == "invalid_document"
+
+
+def test_dossier_includes_next_steps(api: TestClient) -> None:
+    result = api.post("/api/dossier", json={"files": [encoded(CHAT)]}).json()
+    titles = [step["title"] for step in result["next_steps"]]
+    assert "Try a free pre-litigation Lok Adalat" in titles
+    assert titles[-1] == "Get free legal help if you are eligible"

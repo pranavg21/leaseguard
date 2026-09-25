@@ -3,7 +3,7 @@
  * Render the deposit-recovery dossier as accessible tables and lists.
  */
 
-import { dataTable, h, replaceChildren } from './dom.js';
+import { dataTable, h, replaceChildren, stepsList } from './dom.js';
 
 export { dataTable } from './dom.js';
 
@@ -93,5 +93,6 @@ export function renderDossier(doc, container, data) {
     h(doc, 'h3', {}, ['Timeline']),
     data.events.length ? eventsTable(doc, data.events) : h(doc, 'p', {}, ['No dated events were found in the evidence.']),
     ...findingsElements(doc, data),
+    ...stepsList(doc, data.next_steps),
   ]);
 }

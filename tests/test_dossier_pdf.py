@@ -26,6 +26,8 @@ def test_pdf_contains_every_section() -> None:
         "three years",
         "63(4)(c)",
         "Demand notice",
+        "Your next steps",
+        "Lok Adalat",
         "To do:",
     ):
         assert expected in text

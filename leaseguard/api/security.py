@@ -11,6 +11,7 @@ from starlette.responses import JSONResponse, Response
 from leaseguard.constants import (
     HSTS_MAX_AGE_SECONDS,
     MAX_REQUEST_BYTES,
+    RATE_LIMIT_MAX_CLIENTS,
     RATE_LIMIT_REQUESTS,
     RATE_LIMIT_WINDOW_SECONDS,
 )
@@ -67,15 +68,22 @@ def client_id(request: Request) -> str:
 class RateLimiter:
     """Sliding-window limiter: at most ``limit`` requests per ``window`` seconds per client."""
 
-    def __init__(self, limit: int = RATE_LIMIT_REQUESTS, window: float = RATE_LIMIT_WINDOW_SECONDS) -> None:
+    def __init__(
+        self,
+        limit: int = RATE_LIMIT_REQUESTS,
+        window: float = RATE_LIMIT_WINDOW_SECONDS,
+        max_clients: int = RATE_LIMIT_MAX_CLIENTS,
+    ) -> None:
         """Create a limiter.
 
         Args:
             limit: Requests allowed per window.
             window: Window length in seconds.
+            max_clients: Tracked clients above which idle entries are swept, bounding memory.
         """
         self._limit = limit
         self._window = window
+        self._max_clients = max_clients
         self._hits: defaultdict[str, deque[float]] = defaultdict(deque)
         self._lock = threading.Lock()
 
@@ -91,6 +99,8 @@ class RateLimiter:
         """
         current = time.monotonic() if now is None else now
         with self._lock:
+            if len(self._hits) >= self._max_clients:
+                self._sweep(current)
             hits = self._hits[key]
             while hits and current - hits[0] >= self._window:
                 hits.popleft()
@@ -98,6 +108,15 @@ class RateLimiter:
                 return False
             hits.append(current)
             return True
+
+    def _sweep(self, now: float) -> None:
+        idle = [key for key, hits in self._hits.items() if not hits or now - hits[-1] >= self._window]
+        for key in idle:
+            del self._hits[key]
+
+    def tracked_clients(self) -> int:
+        """Return how many clients are currently tracked (for monitoring and tests)."""
+        return len(self._hits)
 
 
 def reject_unsafe_request(request: Request, limiter: RateLimiter) -> Response | None:

@@ -17,3 +17,5 @@ dist/
 build/
 *.pdf
 .DS_Store
+.vscode/
+.idea/

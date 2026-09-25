@@ -45,3 +45,10 @@ def test_today_ist_handles_midnight_window() -> None:
     assert today_ist(naive_night) == date(2026, 9, 25)
     # Default without args returns today's date in IST
     assert isinstance(today_ist(), date)
+
+
+def test_timezone_data_ships_with_the_app() -> None:
+    """India's zone must resolve even on slim images without OS tz files (tzdata is a pinned dependency)."""
+    import tzdata
+
+    assert tzdata.IANA_VERSION

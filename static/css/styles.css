@@ -100,6 +100,7 @@ button:disabled { opacity: 0.6; cursor: progress; }
 .counts li { padding: 0.5rem 1rem; border-radius: var(--radius); }
 .finding { border-top: 1px solid var(--line); padding: 0.5rem 0; }
 .finding summary { cursor: pointer; font-weight: 600; }
+ol.steps li { margin-bottom: 0.5rem; }
 blockquote { margin: 0.5rem 0; padding-left: 0.75rem; border-left: 4px solid var(--line); font-style: italic; }
 .note { background: var(--page); padding: 0.5rem 0.75rem; border-radius: var(--radius); }
 

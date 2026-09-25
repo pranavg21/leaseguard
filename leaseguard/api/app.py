@@ -7,6 +7,7 @@ from pathlib import Path
 
 from fastapi import FastAPI, Request
 from fastapi.exceptions import RequestValidationError
+from fastapi.middleware.gzip import GZipMiddleware
 from fastapi.responses import FileResponse, Response
 from fastapi.staticfiles import StaticFiles
 from starlette.exceptions import HTTPException
@@ -15,6 +16,7 @@ from leaseguard import __version__
 from leaseguard.ai import LLMClient, get_client
 from leaseguard.api import dossier_routes, routes
 from leaseguard.api.security import Handler, RateLimiter, build_security_middleware, error_response
+from leaseguard.constants import GZIP_MIN_BYTES, STATIC_MAX_AGE_SECONDS
 from leaseguard.errors import LeaseGuardError, describe_error
 from leaseguard.logging_config import configure_logging
 from leaseguard.telemetry import Recorder, get_recorder
@@ -26,6 +28,7 @@ mimetypes.add_type("application/manifest+json", ".webmanifest")
 STATIC_DIR = Path(__file__).resolve().parents[2] / "static"
 ROOT_FILES = ("sw.js", "manifest.webmanifest", "offline.html", "icon.svg")
 _MS_PER_SECOND = 1000
+HTTP_OK = 200
 
 
 async def _log_requests(request: Request, call_next: Handler) -> Response:
@@ -34,6 +37,13 @@ async def _log_requests(request: Request, call_next: Handler) -> Response:
     latency = round((time.perf_counter() - started) * _MS_PER_SECOND, 1)
     extra = {"method": request.method, "path": request.url.path, "status": response.status_code, "latency_ms": latency}
     logger.info("request", extra=extra)
+    return response
+
+
+async def _cache_static(request: Request, call_next: Handler) -> Response:
+    response = await call_next(request)
+    if request.url.path.startswith("/static/") and response.status_code == HTTP_OK:
+        response.headers["Cache-Control"] = f"public, max-age={STATIC_MAX_AGE_SECONDS}"
     return response
 
 
@@ -96,7 +106,9 @@ def create_app(client: LLMClient | None = None, recorder: Recorder | None = None
     app.state.llm_client = client or get_client()
     app.state.recorder = recorder or get_recorder()
     app.middleware("http")(build_security_middleware(RateLimiter()))
+    app.middleware("http")(_cache_static)
     app.middleware("http")(_log_requests)
+    app.add_middleware(GZipMiddleware, minimum_size=GZIP_MIN_BYTES)
     _register_errors(app)
     app.include_router(routes.router)
     app.include_router(dossier_routes.router)

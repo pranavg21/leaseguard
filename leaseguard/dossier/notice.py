@@ -5,26 +5,22 @@ from datetime import date
 from leaseguard.constants import NOTICE_REPLY_DAYS
 from leaseguard.dossier.models import Dossier, Event, EventKind
 from leaseguard.dossier.timeline import first_of
+from leaseguard.formatting import indian_rupees
 
 BLANK = "____________________"
 NOTE = "Draft prepared by LeaseGuard for review by you or a lawyer before sending. It is not legal advice."
 
 
 def rupees(amount: int | None) -> str:
-    """Format rupees with Indian digit grouping (for example Rs. 1,50,000).
+    """Format rupees for the notice, leaving a blank to fill when the amount is unknown.
 
     Args:
         amount: Whole rupees, or None.
 
     Returns:
-        The formatted amount, or a blank to fill in.
+        For example ``Rs. 1,50,000``.
     """
-    if amount is None:
-        return f"Rs. {BLANK}"
-    digits = str(amount)
-    head, tail = digits[:-3], digits[-3:]
-    groups = [head[max(i - 2, 0) : i] for i in range(len(head), 0, -2)][::-1]
-    return "Rs. " + ",".join([*groups, tail]) if head else f"Rs. {tail}"
+    return f"Rs. {BLANK}" if amount is None else indian_rupees(amount)
 
 
 def _on(event: Event | None) -> str:

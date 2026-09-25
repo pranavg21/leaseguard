@@ -99,3 +99,14 @@ export function dataTable(doc, caption, headers, rows) {
   }, [table]);
 }
 
+
+/**
+ * Build the "Your next steps" section: a heading and an ordered list of titled steps.
+ * @param {Document} doc - The owning document.
+ * @param {Array<{title: string, detail: string}>} steps - Steps in order.
+ * @returns {HTMLElement[]} The heading and the list.
+ */
+export function stepsList(doc, steps) {
+  const items = steps.map((step) => h(doc, 'li', {}, [h(doc, 'strong', {}, [`${step.title}. `]), step.detail]));
+  return [h(doc, 'h3', {}, ['Your next steps']), h(doc, 'ol', { class: 'steps' }, items)];
+}

@@ -75,3 +75,16 @@ def test_csp_meta_and_server_policies_in_sync() -> None:
         match = pattern.search(html_file.read_text(encoding="utf-8"))
         assert match is not None, f"Missing CSP meta tag in {html_file.name}"
         assert match.group(1) == CSP_META_POLICY, f"Mismatch in {html_file.name}"
+
+
+def test_rate_limiter_memory_is_bounded() -> None:
+    limiter = RateLimiter(limit=5, window=10, max_clients=3)
+    for i in range(3):
+        limiter.allow(f"client-{i}", now=0)
+    assert limiter.tracked_clients() == 3
+    limiter.allow("client-new", now=20)  # others idle for a full window: swept
+    assert limiter.tracked_clients() == 1
+    limiter.allow("a", now=21)
+    limiter.allow("b", now=21)
+    limiter.allow("c", now=22)  # at capacity but all active: nothing to sweep
+    assert limiter.tracked_clients() == 4

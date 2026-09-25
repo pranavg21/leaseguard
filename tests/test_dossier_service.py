@@ -62,3 +62,31 @@ def test_sample_evidence_produces_a_complete_timeline() -> None:
     dossier = build_dossier(uploads, SAMPLE_LEASE, PARTIES, OfflineClient(), Language.ENGLISH)
     assert dossier.checklist == []
     assert {e.kind for e in dossier.events} == set(EventKind) - {EventKind.REFUND}
+
+
+class CountingLabeller(OfflineClient):
+    """Counts AI labelling calls."""
+
+    def __init__(self) -> None:
+        self.calls = 0
+
+    def label_events(self, messages: list[Message], language: Language) -> dict[int, tuple[EventKind, str]]:
+        self.calls += 1
+        return super().label_events(messages, language)
+
+
+def test_identical_inputs_reuse_the_cached_dossier() -> None:
+    from leaseguard.dossier.service import dossier_key
+
+    client = CountingLabeller()
+    uploads = [Upload("chat.txt", CHAT, None)]
+    first = build_dossier(uploads, None, PARTIES, client, Language.ENGLISH)
+    second = build_dossier(uploads, None, PARTIES, client, Language.ENGLISH)
+    assert first is second
+    assert client.calls == 1
+    changed = [Upload("chat.txt", CHAT + b"\n", None)]
+    assert dossier_key(changed, None, PARTIES, Language.ENGLISH) != dossier_key(
+        uploads, None, PARTIES, Language.ENGLISH
+    )
+    build_dossier(uploads, None, PARTIES, client, Language.HINDI)
+    assert client.calls == 2

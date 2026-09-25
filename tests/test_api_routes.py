@@ -69,3 +69,13 @@ def test_validation_errors_do_not_echo_input(api: TestClient) -> None:
     response = api.post("/api/analyze", json={"document": {"text": "<script>alert(1)</script>", "file_base64": "x"}})
     assert response.status_code == 422
     assert "script" not in response.text
+
+
+def test_analyze_returns_key_terms_and_next_steps(api: TestClient, sample_body: JSON) -> None:
+    body = api.post("/api/analyze", json=sample_body).json()
+    assert body["key_terms"][0] == {
+        "label": "Monthly rent",
+        "value": "Rs. 25,000",
+        "quote": "2. Rent: The Tenant shall pay a monthly rent of Rs. 25,000 on or before the 5th of every month.",
+    }
+    assert body["next_steps"][-1]["title"] == "Get free legal help if you are eligible"

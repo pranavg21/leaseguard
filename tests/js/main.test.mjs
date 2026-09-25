@@ -4,7 +4,7 @@ import { download, init, runAction } from '../../static/js/main.js';
 import { fakeFetch, flush, loadPage } from './helpers.mjs';
 
 const LEASE = 'x'.repeat(600);
-const REPORT = { counts: { HIGH: 0, MEDIUM: 0, FAIR: 1 }, findings: [], gaps: [], coverage_complete: true, context_notes: [] };
+const REPORT = { counts: { HIGH: 0, MEDIUM: 0, FAIR: 1 }, findings: [], gaps: [], coverage_complete: true, context_notes: [], key_terms: [], next_steps: [] };
 const META = { roles: ['tenant', 'landlord'], states: ['Maharashtra'], languages: ['English'], ai_mode: 'offline' };
 
 function routes() {

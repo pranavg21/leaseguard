@@ -35,3 +35,13 @@ def test_best_sentence_prefers_keywords_and_keeps_rupee_abbreviation() -> None:
 
 def test_best_sentence_is_truncated() -> None:
     assert len(best_sentence("word " * 500, ())) == MAX_QUOTE_CHARS
+
+
+def test_normalised_text_is_reusable_and_equivalent() -> None:
+    from leaseguard.grounding import NormalisedText, appears_in
+
+    source = NormalisedText(SOURCE)
+    assert source.text == normalise(SOURCE)
+    assert verify_grounding("security deposit of Rs. 2,50,000", source)
+    assert appears_in("Tenant", source)
+    assert not appears_in("landlord", source)

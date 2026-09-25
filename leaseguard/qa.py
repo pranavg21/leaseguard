@@ -1,7 +1,7 @@
 """Grounded question answering: every answer must cite a verified quote."""
 
 from leaseguard.ai import LLMClient
-from leaseguard.grounding import verify_grounding
+from leaseguard.grounding import NormalisedText, verify_grounding
 from leaseguard.models import Answer, Clause, Language
 from leaseguard.privacy import scrub_pii
 
@@ -43,7 +43,7 @@ def ask(question: str, clauses: list[Clause], client: LLMClient, language: Langu
     if not cleaned or not clauses:
         return _NO_ANSWER
     raw = client.answer(cleaned, clauses, language)
-    source = "\n".join(clause.text for clause in clauses)
+    source = NormalisedText("\n".join(clause.text for clause in clauses))
     if not verify_grounding(raw.quote, source):
         return _NO_ANSWER
     text = raw.answer.strip() or "See the quoted clause."

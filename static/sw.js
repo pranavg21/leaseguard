@@ -5,7 +5,7 @@
  * never cached, because agreements must not be stored.
  */
 
-const CACHE_NAME = 'leaseguard-shell-v3';
+const CACHE_NAME = 'leaseguard-shell-v4';
 const SHELL = Object.freeze([
   '/',
   '/offline.html',
@@ -18,6 +18,7 @@ const SHELL = Object.freeze([
   '/static/js/forms.js',
   '/static/js/render.js',
   '/static/js/view.js',
+  '/static/js/lazy.js',
   '/static/js/evidence.js',
   '/static/js/dossier.js',
   '/static/js/dossier_render.js',

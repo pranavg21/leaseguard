@@ -4,7 +4,7 @@
  */
 
 import { createApi } from './api.js';
-import { bindDossier } from './dossier.js';
+import { loadWhenNeeded, once } from './lazy.js';
 import { setBusy, setMessage } from './dom.js';
 import { byId, readContext, readDocument, textDocument } from './forms.js';
 import { renderAnswer, renderComparison, renderOptions, renderReport, renderRoles } from './render.js';
@@ -109,6 +109,18 @@ export function bindSamples(doc, api) {
 }
 
 /**
+ * Dynamically import and bind the deposit-recovery dossier (three modules the review never needs).
+ * @param {Document} doc - The document.
+ * @param {Window} win - The window.
+ * @param {object} deps - Shared helpers passed to bindDossier.
+ * @returns {Promise<void>}
+ */
+export async function loadDossier(doc, win, deps) {
+  const { bindDossier } = await import('./dossier.js');
+  bindDossier(doc, win, deps);
+}
+
+/**
  * Initialise the page.
  * @param {Document} doc - The document.
  * @param {Window} win - The window.
@@ -117,9 +129,10 @@ export function bindSamples(doc, api) {
  */
 export async function init(doc, win, fetchFn) {
   const api = createApi(fetchFn);
-  const state = { current: null, samples: null, dossier: null };
+  const state = { current: null, samples: null, dossier: null, loadDossier: null };
   bindForms(doc, win, api, state);
-  bindDossier(doc, win, { api, state, run: runAction, download });
+  state.loadDossier = once(() => loadDossier(doc, win, { api, state, run: runAction, download }));
+  loadWhenNeeded(win, byId(doc, 'dossier-section'), state.loadDossier);
   bindSamples(doc, api);
   try {
     const meta = await api.getJson('/api/meta');

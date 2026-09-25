@@ -20,6 +20,9 @@ def test_packet_lists_flagged_clauses_and_notes(client: OfflineClient, tenant_ct
     text = pdf_text(data)
     assert data.startswith(b"%PDF-")
     assert "HIGH RISK" in text
+    assert "Key terms at a glance" in text
+    assert "Your next steps" in text
+    assert "15100" in " ".join(text.split())
     assert "Question for your lawyer" in text
     assert "Maharashtra" in text
     meta = PdfReader(io.BytesIO(data)).metadata

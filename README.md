@@ -31,8 +31,8 @@ Every quote LeaseGuard shows is checked against the source document.
 | Comparing contracts, agreements or policies | **Compare two drafts**: an accessible table showing "better / worse / unchanged" for each topic |
 | Highlighting clauses, obligations, risks, inconsistencies | Clause-by-clause **Fair / Medium / High** ratings against a documented fair baseline |
 | Answering questions based on provided documents | **Ask your agreement**: every answer cites a verified quote, or the app replies "Not stated in your agreement" |
-| Helping users understand options and next steps | Guidance for the user's role (tenant or landlord) and notes for their state |
-| Generating summaries, checklists, actionable outputs | Risk counts, a missing-protections checklist and a downloadable PDF |
+| Helping users understand options and next steps | **Your next steps**: an ordered action plan built from the findings and the user's context. It covers negotiating the flagged clauses, adding missing protections, stamp duty and registration, and lawyer review, and it always ends with **free legal aid** (the NALSA helpline 15100, the District Legal Services Authority, and who is eligible under s.12 of the Legal Services Authorities Act, 1987). The dossier has its own plan: demand notice, s.63 certificate, a free pre-litigation Lok Adalat, the forum and the time limit. |
+| Generating summaries, checklists, actionable outputs | **Key terms at a glance**: rent, deposit (also in months of rent), term, lock-in, notice and rent increase, each with the verbatim sentence it came from, or "Not stated". Also risk counts, a missing-protections checklist and downloadable PDFs. |
 | Helping users prepare questions for a legal professional | **Lawyer consultation packet** (PDF) with verified quotes and a targeted question for each flagged clause |
 | Generating actionable outputs; understanding next steps | **Deposit-recovery dossier** (PDF), made of: an evidence index with SHA-256 fingerprints, a list of dates and events, the deposit calculation, contradiction flags, a limitation reminder, a missing-evidence checklist, the BSA s.63(4)(c) certificate in the Schedule's wording (Part A pre-filled, Part B for an expert) and a draft demand notice |
 
@@ -144,7 +144,7 @@ leaseguard/
   api/              FastAPI app, request schemas, security middleware, routes, views
   logging_config.py JSON logs in Cloud Logging format
 static/             accessible HTML, CSS and ES-module JavaScript; service worker; manifest
-tests/              289 pytest tests; tests/js holds 41 Node tests (jsdom)
+tests/              317 pytest tests; tests/js holds 51 Node tests (jsdom)
 scripts/audit.py    structural audit, run in CI and by the test suite
 ```
 
@@ -205,12 +205,21 @@ More detail is in [SECURITY.md](SECURITY.md).
 
 ## Efficiency
 
-- Gemini is called **at most twice per review**, with one batched call per step instead of one call per clause.
-- Results are cached in an LRU cache keyed by the SHA-256 of the scrubbed text plus the user context. A run in which any clause failed is **never cached**.
-- Request handlers are synchronous, so FastAPI runs PDF parsing and AI calls in a worker thread and keeps the event loop free.
-- The frontend needs no framework and no build step. It is six small ES modules.
-- The service worker caches the app shell, so repeat visits load instantly.
-- The container image is slim and installs only runtime dependencies. The Python and JavaScript test suites each run in about 2 seconds.
+Each item below has a test that proves it.
+
+| Technique | Where | Effect |
+|---|---|---|
+| Batched AI calls | `leaseguard/ai/gemini.py` | At most **two Gemini calls per review** and **one per dossier**, instead of one per clause or message |
+| Content-hash caches for reviews and dossiers | `engine.py`, `dossier/service.py` | Asking a question, comparing drafts or downloading a PDF reuses the analysis already done. **Downloading the dossier PDF makes no second Gemini call.** Failed runs are never cached. |
+| Normalise once per document | `grounding.NormalisedText` | Checking every quote is linear in document size, not quadratic |
+| Bounded rate-limiter memory | `api/security.RateLimiter` | Idle client entries are swept, so memory stays bounded even with many IPs |
+| gzip compression | `GZipMiddleware` | JSON, HTML, JS and CSS are compressed above 1 KB |
+| Static caching | `Cache-Control: public, max-age=86400` on `/static/`, `no-cache` on pages | Assets are revalidated rarely, and pages always stay fresh |
+| **Lazy loading** | `static/js/lazy.js` | The three dossier modules load with a dynamic `import()` only when that section nears the viewport or receives focus |
+| Offline shell | `static/sw.js` | Repeat visits load from cache; API calls are never cached |
+| Worker threads | synchronous FastAPI handlers | PDF parsing and AI calls never block the event loop |
+| No framework, no build step | `static/js/` | About 32 KB of plain ES modules |
+| Slim, non-root container | `Dockerfile` | Installs only pinned runtime dependencies, including `tzdata`, so timezone handling works on slim images |
 
 ## Accessibility
 
@@ -229,8 +238,8 @@ Accessibility was checked with **axe-core** against WCAG 2.2 AA and best practic
 
 | Gate | Result |
 |---|---|
-| `pytest --cov` | 289 tests, **100% line and branch coverage**, fails below 95% |
-| `node --test` (jsdom) | 41 tests covering every JS module and the service worker |
+| `pytest --cov` | 317 tests, **100% line and branch coverage**, fails below 95% |
+| `node --test` (jsdom) | 51 tests covering every JS module and the service worker |
 | `ruff check` | Almost every rule set enabled (`select = ["ALL"]`), Google-style docstrings |
 | `mypy` | `strict = true`, no `type: ignore` in source |
 | `pylint` duplicate-code | 10.00/10 |

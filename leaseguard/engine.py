@@ -7,7 +7,7 @@ from leaseguard.cache import LRUCache, content_key
 from leaseguard.constants import CACHE_SIZE
 from leaseguard.context_rules import context_notes, frame_for_role
 from leaseguard.errors import describe_error
-from leaseguard.grounding import best_sentence, verify_grounding
+from leaseguard.grounding import NormalisedText, best_sentence, verify_grounding
 from leaseguard.knowledge import BASELINE, CATEGORY_TITLES, EXPECTED_CATEGORIES, LAWYER_QUESTIONS
 from leaseguard.models import AnalysisReport, Category, Clause, CoverageGap, Finding, UserContext
 from leaseguard.privacy import scrub_pii
@@ -32,14 +32,14 @@ def report_key(clean_text: str, ctx: UserContext) -> str:
     return content_key(ctx.role.value, ctx.state, str(ctx.monthly_rent), ctx.language.value, clean_text)
 
 
-def build_finding(clause: Clause, category: Category, ctx: UserContext, source: str) -> Finding:
+def build_finding(clause: Clause, category: Category, ctx: UserContext, source: NormalisedText) -> Finding:
     """Rate one clause and attach a verified quote.
 
     Args:
         clause: The clause to rate.
         category: Its category.
         ctx: The user's context.
-        source: The full scrubbed document, used to verify the quote.
+        source: The full scrubbed document, normalised once, used to verify the quote.
 
     Returns:
         The finding.
@@ -76,7 +76,7 @@ def coverage_gaps(findings: list[Finding]) -> list[CoverageGap]:
 
 
 def _rate_all(
-    clauses: list[Clause], client: LLMClient, ctx: UserContext, source: str
+    clauses: list[Clause], client: LLMClient, ctx: UserContext, source: NormalisedText
 ) -> tuple[list[Finding], list[int]]:
     categories = client.classify(clauses)
     findings: list[Finding] = []
@@ -98,7 +98,7 @@ def _explain(findings: list[Finding], client: LLMClient, ctx: UserContext) -> No
 
 
 def _build_report(clean: str, ctx: UserContext, client: LLMClient) -> AnalysisReport:
-    findings, failed = _rate_all(segment_clauses(clean), client, ctx, clean)
+    findings, failed = _rate_all(segment_clauses(clean), client, ctx, NormalisedText(clean))
     _explain(findings, client, ctx)
     return AnalysisReport(
         findings=findings,

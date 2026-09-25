@@ -6,7 +6,7 @@ import { fakeFetch, flush, loadPage } from './helpers.mjs';
 import { createApi } from '../../static/js/api.js';
 import { download, runAction } from '../../static/js/main.js';
 
-const DOSSIER = { files: [], events: [], ledger: { deposit: null, deposit_source: 'not found', refunded: 0, deductions_claimed: 0, outstanding: null }, contradictions: [], limitation_deadline: null, checklist: [] };
+const DOSSIER = { files: [], events: [], ledger: { deposit: null, deposit_source: 'not found', refunded: 0, deductions_claimed: 0, outstanding: null }, contradictions: [], limitation_deadline: null, checklist: [], next_steps: [] };
 
 function page() {
   const { window, document } = loadPage();

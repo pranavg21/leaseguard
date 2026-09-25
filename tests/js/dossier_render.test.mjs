@@ -13,6 +13,7 @@ const DOSSIER = {
   contradictions: ['Ravi promised a refund, then later claimed deductions.'],
   limitation_deadline: '2029-08-31',
   checklist: ['Add proof of move-out.'],
+  next_steps: [{ title: 'Send the demand notice', detail: 'By registered post.' }],
 };
 
 test('rupees and hash status', () => {
@@ -59,4 +60,11 @@ test('renderDossier handles an empty timeline', () => {
   assert.equal(box.querySelectorAll('table').length, 2);
   renderDossier(document, box, { ...DOSSIER, events: [] });
   assert.match(box.textContent, /No dated events/);
+});
+
+test('dossier ends with its action plan', () => {
+  const { document } = loadPage();
+  const box = document.getElementById('dossier');
+  renderDossier(document, box, DOSSIER);
+  assert.match(box.querySelector('ol.steps').textContent, /Send the demand notice\. By registered post\./);
 });

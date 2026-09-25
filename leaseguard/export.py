@@ -12,6 +12,8 @@ from reportlab.platypus import Flowable, KeepTogether, Paragraph, SimpleDocTempl
 from leaseguard.constants import PDF_MARGIN_MM
 from leaseguard.knowledge import CATEGORY_TITLES
 from leaseguard.models import AnalysisReport, Finding, RiskLevel
+from leaseguard.steps import Step, review_steps
+from leaseguard.summary import key_terms
 
 DISCLAIMER = (
     "LeaseGuard provides information, not legal advice. Please review this packet with a qualified "
@@ -72,6 +74,34 @@ def _sections(report: AnalysisReport, styles: StyleSheet1) -> list[Flowable]:
     return story
 
 
+def steps_flowables(steps: list[Step], styles: StyleSheet1) -> list[Flowable]:
+    """Render an ordered action plan as numbered paragraphs.
+
+    Args:
+        steps: The steps.
+        styles: ReportLab stylesheet.
+
+    Returns:
+        A heading followed by one paragraph per step.
+    """
+    lines = [f"{n}. {step.title}: {step.detail}" for n, step in enumerate(steps, start=1)]
+    return [para("Your next steps", "Heading2", styles), *(para(line, "BodyText", styles) for line in lines)]
+
+
+def key_terms_flowables(report: AnalysisReport, styles: StyleSheet1) -> list[Flowable]:
+    """Render the key terms at a glance.
+
+    Args:
+        report: The analysis report.
+        styles: ReportLab stylesheet.
+
+    Returns:
+        A heading followed by one line per term.
+    """
+    lines = [f"{t.label}: {t.value}" + (f' - "{t.quote}"' if t.quote else "") for t in key_terms(report)]
+    return [para("Key terms at a glance", "Heading2", styles), *(para(line, "BodyText", styles) for line in lines)]
+
+
 def draw_footer(canvas: Canvas, doc: SimpleDocTemplate) -> None:
     """Draw the page footer with the disclaimer and page number.
 
@@ -120,4 +150,5 @@ def build_packet(report: AnalysisReport) -> bytes:
         para(DISCLAIMER, "BodyText", styles),
         para(f"Reviewed as: {context.role.value}. State: {context.state}.", "BodyText", styles),
     ]
-    return render_pdf(header + _sections(report, styles), "LeaseGuard consultation packet")
+    story = [*header, *key_terms_flowables(report, styles), *_sections(report, styles)]
+    return render_pdf([*story, *steps_flowables(review_steps(report), styles)], "LeaseGuard consultation packet")

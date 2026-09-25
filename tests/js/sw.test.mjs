@@ -10,7 +10,7 @@ function loadWorker({ online = true } = {}) {
   const store = new Map();
   const caches = {
     open: async () => ({ addAll: async (urls) => urls.forEach((u) => store.set(u, `cached:${u}`)) }),
-    keys: async () => ['old-cache', 'leaseguard-shell-v3'],
+    keys: async () => ['old-cache', 'leaseguard-shell-v4'],
     delete: async (key) => { caches.deleted.push(key); return true; },
     match: async (request) => store.get(typeof request === 'string' ? request : new URL(request.url).pathname),
     deleted: [],

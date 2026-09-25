@@ -1,6 +1,6 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { dataTable, h, replaceChildren, setBusy, setMessage } from '../../static/js/dom.js';
+import { dataTable, h, replaceChildren, setBusy, setMessage, stepsList } from '../../static/js/dom.js';
 import { loadPage } from './helpers.mjs';
 
 test('h sets attributes and text safely', () => {
@@ -42,3 +42,13 @@ test('dataTable wraps table in a keyboard-scrollable labelled region', () => {
   assert.equal(region.querySelectorAll('tbody tr').length, 1);
 });
 
+
+test('stepsList renders an ordered list of titled steps', () => {
+  const { document } = loadPage();
+  const [heading, list] = stepsList(document, [{ title: 'A', detail: 'first' }, { title: 'B', detail: '<b>x</b>' }]);
+  assert.equal(heading.tagName, 'H3');
+  assert.equal(list.tagName, 'OL');
+  assert.equal(list.children.length, 2);
+  assert.equal(list.querySelector('b'), null);
+  assert.match(list.textContent, /A\. first/);
+});

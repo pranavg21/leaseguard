@@ -3,7 +3,7 @@
  * Render API results into accessible DOM using the safe helpers in dom.js.
  */
 
-import { dataTable, h, replaceChildren } from './dom.js';
+import { dataTable, h, replaceChildren, stepsList } from './dom.js';
 import { RISK_ORDER, countsSummary, directionText, riskText, verificationText } from './view.js';
 
 /**
@@ -71,6 +71,17 @@ export function gapsElements(doc, report) {
 }
 
 /**
+ * Key terms at a glance, each with the sentence it came from.
+ * @param {Document} doc - The owning document.
+ * @param {Array<{label: string, value: string, quote: string}>} terms - Terms from the API.
+ * @returns {HTMLElement} The table in its scroll region.
+ */
+export function keyTermsTable(doc, terms) {
+  const rows = terms.map((t) => [t.label, t.value, t.quote ? h(doc, 'q', {}, [t.quote]) : '-']);
+  return dataTable(doc, 'Key terms at a glance', ['Term', 'Value', 'From your agreement'], rows);
+}
+
+/**
  * Render a full analysis report.
  * @param {Document} doc - The owning document.
  * @param {Element} container - Where to render.
@@ -83,10 +94,12 @@ export function renderReport(doc, container, report) {
   const notes = report.context_notes.map((note) => h(doc, 'p', { class: 'note' }, [`ℹ️ ${note}`]));
   replaceChildren(container, [
     counts,
+    keyTermsTable(doc, report.key_terms),
     ...notes,
     h(doc, 'h3', {}, ['Clause-by-clause review']),
     ...report.findings.map((finding) => findingElement(doc, finding)),
     ...gapsElements(doc, report),
+    ...stepsList(doc, report.next_steps),
   ]);
 }
 
