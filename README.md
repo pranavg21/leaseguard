@@ -4,7 +4,7 @@
 
 **Chosen vertical:** AI for Legal Assistance & Access
 
-**Live app:** *Deploy with `gcloud run deploy leaseguard --source . --region asia-south1 --allow-unauthenticated`*
+**Live app:** [https://leaseguard-897669266422.asia-south1.run.app](https://leaseguard-897669266422.asia-south1.run.app)
 
 LeaseGuard covers a residential tenancy in India from signing to getting the deposit back.
 
