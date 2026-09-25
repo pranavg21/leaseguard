@@ -2,6 +2,7 @@
 
 import json
 from types import SimpleNamespace
+from typing import Any
 
 from google.genai import errors
 
@@ -17,7 +18,9 @@ CLAUSES = [
 
 class FakeModels:
     def __init__(self, payload: object = None, error: Exception | None = None) -> None:
-        self.payload, self.error, self.calls = payload, error, []
+        self.payload = payload
+        self.error = error
+        self.calls: list[dict[str, Any]] = []
 
     def generate_content(self, model: str, contents: str, config: object) -> SimpleNamespace:
         self.calls.append({"model": model, "contents": contents, "config": config})

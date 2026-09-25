@@ -53,7 +53,8 @@ def test_recorder_selection(monkeypatch: pytest.MonkeyPatch) -> None:
     NullRecorder().record({"ignored": True})
     monkeypatch.setenv("FIRESTORE_COLLECTION", "metrics")
     monkeypatch.setattr("leaseguard.telemetry.FirestoreRecorder", lambda name: ("firestore", name))
-    assert get_recorder() == ("firestore", "metrics")
+    recorder: object = get_recorder()
+    assert recorder == ("firestore", "metrics")
 
 
 def test_firestore_client_is_created_when_not_injected(monkeypatch: pytest.MonkeyPatch) -> None:

@@ -44,6 +44,7 @@ def test_pdf_text_is_extracted() -> None:
         (b"\x89PNG\r\n\x1a\n" + bytes(range(256)) * 4, "Only PDF"),
         (b"%PDF-1.4 this is not really a pdf", "could not be read"),
     ],
+    ids=["empty", "too_large", "png", "corrupt_pdf"],
 )
 def test_bad_uploads_are_rejected(data: bytes, message: str) -> None:
     with pytest.raises(IngestError, match=message):

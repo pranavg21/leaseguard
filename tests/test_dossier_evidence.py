@@ -32,7 +32,9 @@ def test_detect_kind_by_content(data: bytes, kind: EvidenceKind) -> None:
 
 
 @pytest.mark.parametrize(
-    "data", [b"", b"a" * (MAX_UPLOAD_BYTES + 1), b"\x00\xff\xfe binary", b"RIFF\x00\x00\x00\x00WAVE\xff\xfe"]
+    "data",
+    [b"", b"a" * (MAX_UPLOAD_BYTES + 1), b"\x00\xff\xfe binary", b"RIFF\x00\x00\x00\x00WAVE\xff\xfe"],
+    ids=["empty", "too_large", "bad_binary", "wave_audio"],
 )
 def test_detect_kind_rejects_bad_files(data: bytes) -> None:
     with pytest.raises(IngestError):

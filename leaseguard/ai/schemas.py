@@ -46,7 +46,6 @@ class EventLabel(_IgnoreExtra):
     summary: str = Field(default="", max_length=LLM_SUMMARY_MAX_CHARS)
 
 
-
 def _resolve(node: object, definitions: dict[str, object]) -> object:
     if isinstance(node, list):
         return [_resolve(item, definitions) for item in node]
