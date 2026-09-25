@@ -1,6 +1,6 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { h, replaceChildren, setBusy, setMessage } from '../../static/js/dom.js';
+import { dataTable, h, replaceChildren, setBusy, setMessage } from '../../static/js/dom.js';
 import { loadPage } from './helpers.mjs';
 
 test('h sets attributes and text safely', () => {
@@ -28,3 +28,17 @@ test('replaceChildren, setMessage and setBusy', () => {
   assert.equal(box.getAttribute('aria-busy'), 'true');
   setBusy(null, null, false);
 });
+
+test('dataTable wraps table in a keyboard-scrollable labelled region', () => {
+  const { document } = loadPage();
+  const region = dataTable(document, 'Evidence summary', ['Col 1', 'Col 2'], [['Val 1', 'Val 2']]);
+  assert.equal(region.className, 'table-wrap');
+  assert.equal(region.getAttribute('role'), 'region');
+  assert.equal(region.getAttribute('tabindex'), '0');
+  assert.equal(region.getAttribute('aria-label'), 'Evidence summary');
+  assert.ok(region.querySelector('table'));
+  assert.equal(region.querySelector('caption').textContent, 'Evidence summary');
+  assert.equal(region.querySelectorAll('th[scope="col"]').length, 2);
+  assert.equal(region.querySelectorAll('tbody tr').length, 1);
+});
+

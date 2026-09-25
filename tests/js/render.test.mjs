@@ -60,6 +60,11 @@ test('comparison table has caption and header scopes', () => {
   const { document } = loadPage();
   const box = document.getElementById('comparison');
   renderComparison(document, box, [{ category_title: 'Security deposit', direction: 'better', before: 'HIGH', after: null }]);
+  const wrap = box.querySelector('.table-wrap');
+  assert.ok(wrap);
+  assert.equal(wrap.getAttribute('role'), 'region');
+  assert.equal(wrap.getAttribute('tabindex'), '0');
+  assert.equal(wrap.getAttribute('aria-label'), 'How each topic changed, worst changes first');
   assert.ok(box.querySelector('caption'));
   assert.equal(box.querySelectorAll('th[scope="col"]').length, 4);
   assert.match(box.querySelector('tbody').textContent, /Better.*High risk.*Not present/);

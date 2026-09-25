@@ -17,11 +17,12 @@ from leaseguard.constants import (
 
 Handler = Callable[[Request], Awaitable[Response]]
 
-CONTENT_SECURITY_POLICY = (
+CSP_META_POLICY = (
     "default-src 'self'; script-src 'self'; style-src 'self'; img-src 'self' data:; connect-src 'self'; "
     "font-src 'self'; manifest-src 'self'; worker-src 'self'; object-src 'none'; base-uri 'none'; "
-    "form-action 'self'; frame-ancestors 'none'"
+    "form-action 'self'"
 )
+CONTENT_SECURITY_POLICY = f"{CSP_META_POLICY}; frame-ancestors 'none'"
 SECURITY_HEADERS = {
     "Content-Security-Policy": CONTENT_SECURITY_POLICY,
     "Strict-Transport-Security": f"max-age={HSTS_MAX_AGE_SECONDS}; includeSubDomains",

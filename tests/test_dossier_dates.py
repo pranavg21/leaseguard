@@ -1,10 +1,10 @@
 """Tests for leaseguard/dossier/dates.py."""
 
-from datetime import date
+from datetime import UTC, date, datetime
 
 import pytest
 
-from leaseguard.dossier.dates import add_years, find_date, make_date
+from leaseguard.dossier.dates import add_years, find_date, make_date, today_ist
 
 
 @pytest.mark.parametrize(
@@ -34,3 +34,14 @@ def test_make_date_and_add_years() -> None:
     assert make_date(2026, 13, 1) is None
     assert add_years(date(2026, 3, 10), 3) == date(2029, 3, 10)
     assert add_years(date(2028, 2, 29), 3) == date(2031, 2, 28)
+
+
+def test_today_ist_handles_midnight_window() -> None:
+    # 19:00 UTC on 24 Sept is 00:30 IST on 25 Sept (midnight to 05:30 window)
+    utc_night = datetime(2026, 9, 24, 19, 0, 0, tzinfo=UTC)
+    assert today_ist(utc_night) == date(2026, 9, 25)
+    # Naive datetime is treated as UTC
+    naive_night = datetime(2026, 9, 24, 19, 0, 0, tzinfo=UTC).replace(tzinfo=None)
+    assert today_ist(naive_night) == date(2026, 9, 25)
+    # Default without args returns today's date in IST
+    assert isinstance(today_ist(), date)

@@ -1,9 +1,12 @@
 """Deterministic date parsing. Dates are never produced by a language model."""
 
 import re
-from datetime import date
+from datetime import UTC, date, datetime
+from zoneinfo import ZoneInfo
 
 from leaseguard.constants import TWO_DIGIT_YEAR_BASE, TWO_DIGIT_YEAR_LIMIT
+
+INDIA_TZ = ZoneInfo("Asia/Kolkata")
 
 _MONTHS = {
     name: number
@@ -91,3 +94,21 @@ def add_years(start: date, years: int) -> date:
         return start.replace(year=start.year + years)
     except ValueError:
         return start.replace(year=start.year + years, day=28)
+
+
+def today_ist(now: datetime | None = None) -> date:
+    """Return the calendar date in Indian Standard Time (UTC+05:30).
+
+    On Cloud Run, servers run in UTC. A notice generated between midnight and
+    05:30 IST would print yesterday's date if date.today() were used.
+
+    Args:
+        now: Optional datetime (defaults to current UTC time).
+
+    Returns:
+        Current calendar date in India.
+    """
+    current = now or datetime.now(UTC)
+    if current.tzinfo is None:
+        current = current.replace(tzinfo=UTC)
+    return current.astimezone(INDIA_TZ).date()

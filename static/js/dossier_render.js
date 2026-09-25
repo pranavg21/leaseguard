@@ -3,7 +3,9 @@
  * Render the deposit-recovery dossier as accessible tables and lists.
  */
 
-import { h, replaceChildren } from './dom.js';
+import { dataTable, h, replaceChildren } from './dom.js';
+
+export { dataTable } from './dom.js';
 
 /** Indian digit grouping for rupee amounts. */
 const RUPEES = new Intl.NumberFormat('en-IN');
@@ -30,24 +32,10 @@ export function hashStatus(matches) {
 }
 
 /**
- * Build an accessible table with a caption and column headers.
- * @param {Document} doc - The owning document.
- * @param {string} caption - Table caption.
- * @param {string[]} headers - Column headers.
- * @param {Array<Array<string | Node>>} rows - Cell contents.
- * @returns {HTMLTableElement} The table.
- */
-export function dataTable(doc, caption, headers, rows) {
-  const head = h(doc, 'tr', {}, headers.map((text) => h(doc, 'th', { scope: 'col' }, [text])));
-  const body = rows.map((cells) => h(doc, 'tr', {}, cells.map((cell) => h(doc, 'td', {}, [cell]))));
-  return h(doc, 'table', {}, [h(doc, 'caption', {}, [caption]), h(doc, 'thead', {}, [head]), h(doc, 'tbody', {}, body)]);
-}
-
-/**
  * Evidence index with fingerprints.
  * @param {Document} doc - The owning document.
  * @param {any[]} files - Files from the API.
- * @returns {HTMLTableElement} The table.
+ * @returns {HTMLElement} The table region.
  */
 export function filesTable(doc, files) {
   const rows = files.map((f) => [f.annexure, f.name, h(doc, 'span', { class: 'hash' }, [f.sha256]), hashStatus(f.hash_matches)]);
@@ -58,7 +46,7 @@ export function filesTable(doc, files) {
  * Chronological list of dates and events.
  * @param {Document} doc - The owning document.
  * @param {any[]} events - Events from the API.
- * @returns {HTMLTableElement} The table.
+ * @returns {HTMLElement} The table region.
  */
 export function eventsTable(doc, events) {
   const rows = events.map((e) => [e.date ?? '⚠️ Date needed', e.title, e.actor || '-', h(doc, 'q', {}, [e.quote]), e.annexure]);

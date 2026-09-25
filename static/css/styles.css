@@ -22,7 +22,8 @@
   background: var(--page);
 }
 
-body { margin: 0; }
+*, *::before, *::after { box-sizing: border-box; }
+body { margin: 0; min-width: 320px; }
 main, .site-header, .site-footer { max-width: 60rem; margin: 0 auto; padding: 0 var(--space); }
 
 .skip-link {
@@ -70,6 +71,9 @@ input[type="text"], input[type="number"], select, textarea {
   background: var(--paper);
   color: var(--ink);
 }
+input[type="file"] {
+  max-width: 100%;
+}
 
 button {
   background: var(--brand);
@@ -99,9 +103,30 @@ button:disabled { opacity: 0.6; cursor: progress; }
 blockquote { margin: 0.5rem 0; padding-left: 0.75rem; border-left: 4px solid var(--line); font-style: italic; }
 .note { background: var(--page); padding: 0.5rem 0.75rem; border-radius: var(--radius); }
 
+.table-wrap {
+  overflow-x: auto;
+  max-width: 100%;
+  margin: var(--space) 0;
+  -webkit-overflow-scrolling: touch;
+}
+.table-wrap:focus-visible {
+  outline: 3px solid var(--focus);
+  outline-offset: 2px;
+}
+
 table { border-collapse: collapse; width: 100%; }
 caption { text-align: left; font-weight: 600; padding-bottom: 0.5rem; }
 th, td { border: 1px solid var(--line); padding: 0.5rem; text-align: left; vertical-align: top; }
+
+@media (max-width: 600px) {
+  main, .site-header, .site-footer { padding: 0 0.75rem; }
+  .card { padding: 0.75rem; }
+  .choices { flex-direction: column; gap: 0.5rem; }
+  .actions { flex-direction: column; }
+  button { width: 100%; }
+  th, td { padding: 0.4rem; font-size: 0.9rem; }
+  .hash { font-size: 0.75rem; }
+}
 
 .visually-hidden {
   position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap;

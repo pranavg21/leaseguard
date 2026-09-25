@@ -129,7 +129,13 @@ def check_web(path: Path) -> list[str]:
     if path.suffix == ".html":
         if text.count("<h1") != 1:
             problems.append(f"{name}: must contain exactly one <h1>")
-        required = ('<html lang="', 'class="skip-link"', 'id="main"', "<title>")
+        required = (
+            '<html lang="',
+            'class="skip-link"',
+            'id="main"',
+            "<title>",
+            'http-equiv="Content-Security-Policy"',
+        )
         problems += [f"{name}: missing {marker}" for marker in required if marker not in text]
         if INLINE_CODE.search(text):
             problems.append(f"{name}: inline script, style or event handler")

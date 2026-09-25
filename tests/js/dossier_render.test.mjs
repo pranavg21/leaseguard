@@ -26,11 +26,19 @@ test('rupees and hash status', () => {
 test('tables have captions, scoped headers and safe text', () => {
   const { document } = loadPage();
   const table = eventsTable(document, DOSSIER.events);
+  assert.equal(table.className, 'table-wrap');
+  assert.equal(table.getAttribute('role'), 'region');
+  assert.equal(table.getAttribute('tabindex'), '0');
+  assert.equal(table.getAttribute('aria-label'), 'List of dates and events (quotes are verbatim)');
   assert.ok(table.querySelector('caption'));
   assert.equal(table.querySelectorAll('th[scope="col"]').length, 5);
   assert.equal(table.querySelector('b'), null);
   assert.match(table.textContent, /Date needed/);
-  assert.match(filesTable(document, DOSSIER.files).textContent, /Matches your browser/);
+  const files = filesTable(document, DOSSIER.files);
+  assert.equal(files.getAttribute('role'), 'region');
+  assert.equal(files.getAttribute('tabindex'), '0');
+  assert.equal(files.getAttribute('aria-label'), 'Index of evidence (SHA-256 fingerprints)');
+  assert.match(files.textContent, /Matches your browser/);
   assert.equal(dataTable(document, 'c', ['a'], []).querySelectorAll('tbody tr').length, 0);
 });
 

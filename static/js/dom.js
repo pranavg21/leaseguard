@@ -69,3 +69,33 @@ export function setBusy(button, region, busy) {
     region.setAttribute('aria-busy', String(busy));
   }
 }
+
+/**
+ * Build an accessible, keyboard-scrollable table region with caption and column headers.
+ * @param {Document} doc - The owning document.
+ * @param {string} caption - Table caption.
+ * @param {string[]} headers - Column headers.
+ * @param {Array<Array<string | Node>>} rows - Cell contents.
+ * @returns {HTMLElement} The scrollable container with role="region".
+ */
+export function dataTable(doc, caption, headers, rows) {
+  const head = h(doc, 'tr', {}, headers.map((text) => h(doc, 'th', { scope: 'col' }, [text])));
+  const body = rows.map((cells) => h(doc, 'tr', {}, cells.map((cell) => {
+    if (cell && typeof cell === 'object' && 'tagName' in cell && cell.tagName.toLowerCase() === 'th') {
+      return cell;
+    }
+    return h(doc, 'td', {}, [cell]);
+  })));
+  const table = h(doc, 'table', {}, [
+    h(doc, 'caption', {}, [caption]),
+    h(doc, 'thead', {}, [head]),
+    h(doc, 'tbody', {}, body),
+  ]);
+  return h(doc, 'div', {
+    class: 'table-wrap',
+    role: 'region',
+    tabindex: '0',
+    'aria-label': caption,
+  }, [table]);
+}
+

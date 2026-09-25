@@ -57,3 +57,21 @@ def test_rejects_oversized_body(api: TestClient) -> None:
 def test_rate_limit_returns_429(api: TestClient) -> None:
     statuses = {api.post("/api/analyze", json={}).status_code for _ in range(35)}
     assert statuses == {422, 429}
+
+
+def test_csp_meta_and_server_policies_in_sync() -> None:
+    import re
+    from pathlib import Path
+
+    from leaseguard.api.security import CONTENT_SECURITY_POLICY, CSP_META_POLICY
+
+    expected_server_csp = f"{CSP_META_POLICY}; frame-ancestors 'none'"
+    assert expected_server_csp == CONTENT_SECURITY_POLICY
+    static_dir = Path(__file__).resolve().parents[1] / "static"
+    pattern = re.compile(r'<meta http-equiv="Content-Security-Policy"\s+content="([^"]+)"')
+    html_files = list(static_dir.glob("*.html"))
+    assert html_files, "Expected static HTML files"
+    for html_file in html_files:
+        match = pattern.search(html_file.read_text(encoding="utf-8"))
+        assert match is not None, f"Missing CSP meta tag in {html_file.name}"
+        assert match.group(1) == CSP_META_POLICY, f"Mismatch in {html_file.name}"

@@ -1,7 +1,5 @@
 """Endpoints for the deposit-recovery dossier."""
 
-from datetime import date
-
 from fastapi import APIRouter, Request
 from fastapi.responses import Response
 
@@ -9,6 +7,7 @@ from leaseguard.api.dossier_schemas import DossierRequest
 from leaseguard.api.dossier_views import dossier_view
 from leaseguard.api.routes import llm_client
 from leaseguard.api.views import JsonDict
+from leaseguard.dossier.dates import today_ist
 from leaseguard.dossier.models import Dossier
 from leaseguard.dossier.pdf import build_dossier_pdf
 from leaseguard.dossier.service import build_dossier
@@ -48,6 +47,6 @@ def dossier_pdf(body: DossierRequest, request: Request) -> Response:
     Returns:
         The PDF as an attachment.
     """
-    pdf = build_dossier_pdf(_build(body, request), date.today())  # noqa: DTZ011 - notice date is the local calendar day
+    pdf = build_dossier_pdf(_build(body, request), today_ist())
     headers = {"Content-Disposition": 'attachment; filename="leaseguard-dossier.pdf"', "Cache-Control": "no-store"}
     return Response(content=pdf, media_type="application/pdf", headers=headers)

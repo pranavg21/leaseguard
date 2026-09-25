@@ -3,7 +3,7 @@
  * Render API results into accessible DOM using the safe helpers in dom.js.
  */
 
-import { h, replaceChildren } from './dom.js';
+import { dataTable, h, replaceChildren } from './dom.js';
 import { RISK_ORDER, countsSummary, directionText, riskText, verificationText } from './view.js';
 
 /**
@@ -114,17 +114,12 @@ export function renderAnswer(doc, container, answer) {
  * @returns {void}
  */
 export function renderComparison(doc, container, changes) {
-  const head = h(doc, 'tr', {}, ['Topic', 'Change', 'Original', 'Revised'].map((text) => h(doc, 'th', { scope: 'col' }, [text])));
-  const rows = changes.map((change) => h(doc, 'tr', {}, [
+  const rows = changes.map((change) => [
     h(doc, 'th', { scope: 'row' }, [change.category_title]),
-    h(doc, 'td', {}, [directionText(change.direction)]),
-    h(doc, 'td', {}, [riskText(change.before)]),
-    h(doc, 'td', {}, [riskText(change.after)]),
-  ]));
-  const table = h(doc, 'table', {}, [
-    h(doc, 'caption', {}, ['How each topic changed, worst changes first']),
-    h(doc, 'thead', {}, [head]),
-    h(doc, 'tbody', {}, rows),
+    directionText(change.direction),
+    riskText(change.before),
+    riskText(change.after),
   ]);
+  const table = dataTable(doc, 'How each topic changed, worst changes first', ['Topic', 'Change', 'Original', 'Revised'], rows);
   replaceChildren(container, [table]);
 }

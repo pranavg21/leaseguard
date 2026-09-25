@@ -44,3 +44,11 @@ def test_event_label_accepts_null_kind() -> None:
     assert EventLabel.model_validate({"index": 0, "kind": None}).kind is None
     with pytest.raises(ValidationError):
         EventLabel.model_validate({"index": 0, "kind": "bribe"})
+
+
+def test_all_schemas_use_shared_base_class() -> None:
+    from leaseguard.ai.schemas import ClassifiedClause, EventLabel, Explanation, RawAnswer, _IgnoreExtra
+
+    for schema_cls in (ClassifiedClause, Explanation, RawAnswer, EventLabel):
+        assert issubclass(schema_cls, _IgnoreExtra)
+        assert schema_cls.model_config.get("extra") == "ignore"
